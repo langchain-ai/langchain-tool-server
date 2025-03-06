@@ -11,7 +11,12 @@ on:
     inputs:
       working-directory:
         description: "From which folder this pipeline executes"
-        default: "."
+        default: "libs/server"
+        required: true
+        type: string
+        options:
+          - "libs/server"
+          - "libs/sdk-py"
       dangerous-nonmain-release:
         required: false
         type: boolean
