@@ -9,10 +9,11 @@ Users working in a local environment that need MCP, [can enable MCP support](#MC
 
 ## Why
 
-- 🖥️ **Stateless Web Deployment**: Deploy as a web server without the need for persistent connections, allowing easy autoscaling and load balancing.
+- 🌐 **Stateless Web Deployment**: Deploy as a web server without the need for persistent connections, allowing easy autoscaling and load balancing.
 - 📡 **Simple REST Protocol**: Leverage a straightforward REST API.
 - 🔐 **Built-In Authentication**: Out-of-the-box auth support, ensuring only authorized users can access tools.
 - 🛠️ **Decoupled Tool Creation**: In an enterprise setting, decouple the creation of specialized tools (like data retrieval from specific knowledge sources) from the agent configuration.
+- ⚙️ **Works with existing LangChain tools**: Expose existing LangChain tools to the web with minimal effort.
 
 ## Installation
 
@@ -53,6 +54,7 @@ async def authenticate(headers: dict[bytes, bytes]) -> dict:
     return api_key_to_user[api_key]
 
 
+# Define tools
 
 @app.tool(permissions=["group1"])
 async def echo(msg: str) -> str:
@@ -60,15 +62,23 @@ async def echo(msg: str) -> str:
     return msg + "!"
 
 
-@app.tool(permissions=["group2"])
-async def say_hello() -> str:
-    """Say hello."""
-    return "Hello"
-
+# Tool that has access to the request object
 @app.tool(permissions=["authenticated"])
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
     """Get the user identity."""
     return request.user.identity
+
+
+# You can also expose existing LangChain tools!
+from langchain_core.tools import tool
+
+@tool()
+async def say_hello() -> str:
+    """Say hello."""
+    return "Hello"
+
+# Add an existing LangChain tool to the server with permissions!
+app.tool(say_hello, permissions=["group2"])
 ```
 
 ### Client
