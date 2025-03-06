@@ -21,6 +21,10 @@ test = [
     "ruff>=0.9.7",
 ]
 
+[project.urls]
+repository = "https://github.com/langchain-ai/open-tool-server"
+
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 # -ra: Report all extra test outcomes (passed, skipped, failed, etc.)
