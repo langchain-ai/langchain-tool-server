@@ -54,6 +54,7 @@ jobs:
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
         run: uv build
+        working-directory: ${{ inputs.working-directory }}
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
