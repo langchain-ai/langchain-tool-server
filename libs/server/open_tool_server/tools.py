@@ -72,6 +72,14 @@ class ToolHandler:
 
         if isinstance(tool, BaseTool):
             accepts = []
+            from pydantic import BaseModel
+
+            if not issubclass(tool.args_schema, BaseModel):
+                raise NotImplementedError(
+                    "Expected args_schema to be a Pydantic model. "
+                    f"Got {type(tool.args_schema)}."
+                    "This is not yet supported."
+                )
 
             for name, field in tool.args_schema.model_fields.items():
                 if field.annotation is Request:
