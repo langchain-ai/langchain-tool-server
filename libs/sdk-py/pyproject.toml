@@ -2,7 +2,7 @@
 name = "open-tool-client"
 version = "0.0.1"
 description = "Open Tool Client SDK (Python)"
-readme = "../../README.md"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "orjson>=3.10.1",
