@@ -336,8 +336,8 @@ class AsyncClient:
     async def info(self) -> Any:
         return await self.http.get("/info")
 
-    async def ok(self) -> Any:
-        return await self.http.get("/ok")
+    async def health(self) -> Any:
+        return await self.http.get("/health")
 
 
 class SyncClient:
@@ -351,8 +351,8 @@ class SyncClient:
     def info(self) -> Any:
         return self.http.get("/info")
 
-    def ok(self) -> Any:
-        return self.http.get("/ok")
+    def health(self) -> Any:
+        return self.http.get("/health")
 
 
 class AsyncToolsClient:
@@ -366,18 +366,29 @@ class AsyncToolsClient:
         """List tools."""
         return await self.http.get("/tools")
 
-    async def call(self, name: str, args: Dict[str, Any]) -> Any:
+    async def call(
+        self,
+        tool_id: str,
+        args: Dict[str, Any] | None = None,
+        *,
+        call_id: Optional[str] = None,
+    ) -> Any:
         """Call a tool."""
-        return await self.http.post("/tools/call", json={"name": name, "args": args})
+        payload = {"tool_id": tool_id}
+        if args is not None:
+            payload["input"] = args
+        if call_id is not None:
+            payload["call_id"] = call_id
+        return await self.http.post("/tools/call", json=payload)
 
     async def as_langchain_tools(
-        self, *, select: Sequence[str] | None = None
+        self, *, tool_ids: Sequence[str] | None = None
     ) -> List[BaseTool]:
         """Load tools from the server.
 
         Args:
-            select: If specified, will only load the selected tools.
-                Otherwise, all tools will be loaded.
+            tool_ids: If specified, will only load the selected tools.
+                   Otherwise, all tools will be loaded.
 
         Returns:
             a list of LangChain tools.
@@ -390,18 +401,16 @@ class AsyncToolsClient:
                 "You can install it with `pip install langchain-core`."
             ) from e
 
-        tools = []
-
         available_tools = await self.list()
 
         available_tools_by_name = {tool["name"]: tool for tool in available_tools}
 
-        if select is None:
-            select = list(available_tools_by_name)
+        if tool_ids is None:
+            tool_ids = list(available_tools_by_name)
 
-        if set(select) - set(available_tools_by_name):
+        if set(tool_ids) - set(available_tools_by_name):
             raise ValueError(
-                f"Unknown tool names: {set(select) - set(available_tools_by_name)}"
+                f"Unknown tool names: {set(tool_ids) - set(available_tools_by_name)}"
             )
 
         # The code below will create LangChain style tools by binding
@@ -409,22 +418,29 @@ class AsyncToolsClient:
         def create_tool_caller(tool_name_: str) -> Callable[..., Awaitable[Any]]:
             """Create a tool caller."""
 
-            async def call_tool(**kwargs: Any) -> tuple[Any]:
+            async def call_tool(**kwargs: Any) -> Any:
                 """Call a tool."""
                 call_tool_result = await self.call(tool_name_, kwargs)
-                return call_tool_result
+                if not call_tool_result["success"]:
+                    raise NotImplementedError(
+                        "An error occurred while calling the tool. "
+                        "The client does not yet support error handling."
+                    )
+                return call_tool_result["output"]["value"]
 
             return call_tool
 
-        for tool_name in select:
-            tool_spec = available_tools_by_name[tool_name]
+        tools = []
+
+        for tool_id in tool_ids:
+            tool_spec = available_tools_by_name[tool_id]
 
             tools.append(
                 StructuredTool(
-                    name=tool_name,
+                    name=tool_spec["name"],
                     description=tool_spec["description"],
-                    args_schema=tool_spec["inputSchema"],
-                    coroutine=create_tool_caller(tool_name),
+                    args_schema=tool_spec["input_schema"],
+                    coroutine=create_tool_caller(tool_id),
                 )
             )
         return tools
@@ -441,17 +457,23 @@ class SyncToolsClient:
         """List tools."""
         return self.http.get("/tools")
 
-    def call(self, name: str, args: Dict[str, Any]) -> Any:
+    def call(self, tool_id: str, args: Dict[str, Any] | None = None, *, call_id: str | None = None) -> Any:
         """Call a tool."""
-        return self.http.post("/tools/call", json={"name": name, "args": args})
+
+        payload = {"tool_id": tool_id}
+        if args is not None:
+            payload["input"] = args
+        if call_id is not None:
+            payload["call_id"] = call_id
+        return self.http.post("/tools/call", json=payload)
 
     def as_langchain_tools(
-        self, *, select: Sequence[str] | None = None
+        self, *, tool_ids: Sequence[str] | None = None
     ) -> List[BaseTool]:
         """Load tools from the server.
 
         Args:
-            select: If specified, will only load the selected tools.
+            tool_ids: If specified, will only load the selected tools.
                 Otherwise, all tools will be loaded.
 
         Returns:
@@ -465,41 +487,45 @@ class SyncToolsClient:
                 "You can install it with `pip install langchain-core`."
             ) from e
 
-        tools = []
-
         available_tools = self.list()
-
         available_tools_by_name = {tool["name"]: tool for tool in available_tools}
 
-        if select is None:
-            select = list(available_tools_by_name)
+        if tool_ids is None:
+            tool_ids = list(available_tools_by_name)
 
-        if set(select) - set(available_tools_by_name):
+        if set(tool_ids) - set(available_tools_by_name):
             raise ValueError(
-                f"Unknown tool names: {set(select) - set(available_tools_by_name)}"
+                f"Unknown tool names: {set(tool_ids) - set(available_tools_by_name)}"
             )
 
         # The code below will create LangChain style tools by binding
         # tool metadata and the tool implementation together in a StructuredTool.
 
-        def create_tool_caller(tool_name_: str) -> Callable[..., Any]:
+        def create_tool_caller(tool_id: str) -> Callable[..., Any]:
             """Create a tool caller."""
 
-            def call_tool(**kwargs: Any) -> tuple[Any]:
+            def call_tool(**kwargs: Any) -> Any:
                 """Call a tool."""
-                call_tool_result = self.call(tool_name_, kwargs)
-                return call_tool_result
+                call_tool_result = self.call(tool_id, kwargs)
+                if not call_tool_result["success"]:
+                    raise NotImplementedError(
+                        "An error occurred while calling the tool. "
+                        "The client does not yet support error handling."
+                    )
+                return call_tool_result["output"]["value"]
 
             return call_tool
 
-        for tool_name in select:
+        tools = []
+
+        for tool_name in tool_ids:
             tool_spec = available_tools_by_name[tool_name]
 
             tools.append(
                 StructuredTool(
                     name=tool_name,
                     description=tool_spec["description"],
-                    args_schema=tool_spec["inputSchema"],
+                    args_schema=tool_spec["input_schema"],
                     func=create_tool_caller(tool_name),
                 )
             )

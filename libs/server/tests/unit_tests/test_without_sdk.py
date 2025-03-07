@@ -11,6 +11,8 @@ from open_tool_server import Server
 from open_tool_server._version import __version__
 from open_tool_server.tools import InjectedRequest
 
+from ..unit_tests.utils import AnyStr
+
 
 @asynccontextmanager
 async def get_async_test_client(
@@ -34,9 +36,9 @@ async def get_async_test_client(
 async def test_health() -> None:
     app = Server()
     async with get_async_test_client(app) as client:
-        response = await client.get("/ok")
+        response = await client.get("/health")
         response.raise_for_status()
-        assert response.text == '"OK"'
+        assert response.json() == {"status": "OK"}
 
 
 async def test_info() -> None:
@@ -84,10 +86,18 @@ async def test_lifespan() -> None:
     # Using Starlette's TestClient to make sure that the lifespan is used.
     # Seems to not be supported with httpx's ASGITransport.
     with TestClient(app) as client:
-        response = client.get("/ok")
+        response = client.get("/health")
         assert response.status_code == 200
         assert calls == ["startup"]
-
-        client.post("/tools/call", json={"name": "what_is_foo", "args": {}})
+        response = client.post(
+            "/tools/call", json={"tool_id": "what_is_foo", "input": {}}
+        )
+        response.raise_for_status()
+        result = response.json()
+        assert result == {
+            "output": {"value": "bar"},
+            "success": True,
+            "call_id": AnyStr(),
+        }
 
     assert calls == ["startup", "shutdown"]

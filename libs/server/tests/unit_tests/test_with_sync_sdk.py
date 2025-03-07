@@ -15,6 +15,8 @@ from open_tool_server._version import __version__
 from open_tool_server.auth import Auth
 from open_tool_server.tools import InjectedRequest
 
+from ..unit_tests.utils import AnyStr
+
 
 @contextmanager
 def get_sync_test_client(
@@ -41,10 +43,12 @@ def get_sync_test_client(
         del client
 
 
-def test_ok() -> None:
+def test_health() -> None:
     app = Server()
     with get_sync_test_client(app) as client:
-        assert client.ok() == "OK"
+        assert client.health() == {
+            "status": "OK",
+        }
 
 
 def test_info() -> None:
@@ -83,27 +87,36 @@ def test_add_langchain_tool() -> None:
         data = client.tools.list()
         assert data == [
             {
-                "inputSchema": {"properties": {}, "type": "object"},
                 "description": "Say hello.",
+                "id": "say_hello@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
-                "inputSchema": {
+                "description": "Echo the message back.",
+                "id": "echo@1.0.0",
+                "input_schema": {
                     "properties": {"msg": {"type": "string"}},
                     "required": ["msg"],
                     "type": "object",
                 },
-                "description": "Echo the message back.",
                 "name": "echo",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
-                "inputSchema": {
+                "description": "Add two integers.",
+                "id": "add@1.0.0",
+                "input_schema": {
                     "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
                     "required": ["x", "y"],
                     "type": "object",
                 },
-                "description": "Add two integers.",
                 "name": "add",
+                "output_schema": {"type": "integer"},
+                "version": "1.0.0",
             },
         ]
 
@@ -127,7 +140,12 @@ def test_call_tool() -> None:
             "say_hello",
             {},
         )
-        assert response == "Hello"
+
+        assert response == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
 
 
 def test_create_langchain_tools_from_server() -> None:
@@ -145,7 +163,7 @@ def test_create_langchain_tools_from_server() -> None:
         return x + y
 
     with get_sync_test_client(app) as client:
-        tools = client.tools.as_langchain_tools(select=["say_hello", "add"])
+        tools = client.tools.as_langchain_tools(tool_ids=["say_hello", "add"])
         say_hello_client_side = tools[0]
         add_client_side = tools[1]
 
@@ -210,15 +228,18 @@ def test_auth_list_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "inputSchema": {"properties": {}, "type": "object"},
+                "id": "say_hello@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             }
         ]
 
         client.tools.call("say_hello", {})
 
 
-def test_call_tool_with_auth() -> None:
+async def test_call_tool_with_auth() -> None:
     """Test calling a tool with authentication provided."""
     app = Server()
 
@@ -247,23 +268,25 @@ def test_call_tool_with_auth() -> None:
     app.add_auth(auth)
 
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
-        assert client.tools.call("say_hello", {}) == "Hello"
-
+        assert client.tools.call("say_hello", {}) == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
     with get_sync_test_client(app, headers={"x-api-key": "2"}) as client:
         # `2` does not have permission to call `say_hello`
         with pytest.raises(HTTPStatusError) as exception_info:
-            assert client.tools.call("say_hello", {}) == "Hello"
+            assert client.tools.call("say_hello", {})
         assert exception_info.value.response.status_code == 403
 
     with get_sync_test_client(app, headers={"x-api-key": "3"}) as client:
         # `3` does not have permission to call `say_hello`
         with pytest.raises(HTTPStatusError) as exception_info:
-            assert client.tools.call("say_hello", {}) == "Hello"
-
+            assert client.tools.call("say_hello", {})
         assert exception_info.value.response.status_code == 401
 
 
-def test_call_tool_with_injected() -> None:
+async def test_call_tool_with_injected() -> None:
     """Test calling a tool with an injected request."""
     app = Server()
 
@@ -294,27 +317,23 @@ def test_call_tool_with_injected() -> None:
     app.add_auth(auth)
 
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
-        user_identity = client.tools.call("get_user_identity", {})
-        assert user_identity == "some-user"
+        result = client.tools.call("get_user_identity")
+        assert result["output"]["value"] == "some-user"
 
     with get_sync_test_client(app, headers={"x-api-key": "2"}) as client:
-        user_identity = client.tools.call("get_user_identity", {})
-        assert user_identity == "another-user"
+        result = client.tools.call("get_user_identity")
+        assert result["output"]["value"] == "another-user"
 
     with get_sync_test_client(app, headers={"x-api-key": "3"}) as client:
-        # Make sure this raises 401?
         with pytest.raises(HTTPStatusError) as exception_info:
             client.tools.call("get_user_identity", {})
-
         assert exception_info.value.response.status_code == 403
 
     # Authenticated but tool does not exist
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
-        # Make sure this raises 401?
         with pytest.raises(HTTPStatusError) as exception_info:
             client.tools.call("does_not_exist", {})
-
-        assert exception_info.value.response.status_code == 404
+        assert exception_info.value.response.status_code == 403
 
     # Not authenticated
     with get_sync_test_client(app, headers={"x-api-key": "6"}) as client:
@@ -323,3 +342,104 @@ def test_call_tool_with_injected() -> None:
             client.tools.call("does_not_exist", {})
 
         assert exception_info.value.response.status_code == 401
+
+
+async def test_exposing_existing_langchain_tools() -> None:
+    """Test exposing existing langchain tools."""
+    from langchain_core.tools import StructuredTool, tool
+
+    @tool
+    def say_hello_sync() -> str:
+        """Say hello."""
+        return "Hello"
+
+    @tool
+    async def say_hello_async() -> str:
+        """Say hello."""
+        return "Hello"
+
+    def multiply(a: int, b: int) -> int:
+        """Multiply two numbers."""
+        return a * b
+
+    async def amultiply(a: int, b: int) -> int:
+        """Multiply two numbers."""
+        return a * b
+
+    calculator = StructuredTool.from_function(func=multiply, coroutine=amultiply)
+
+    server = Server()
+    auth = Auth()
+    server.add_auth(auth)
+
+    @auth.authenticate
+    async def authenticate(headers: dict) -> dict:
+        """Authenticate incoming requests."""
+        api_key = headers.get(b"x-api-key")
+
+        api_key_to_user = {
+            b"1": {"permissions": ["group1"], "identity": "some-user"},
+        }
+
+        if not api_key or api_key not in api_key_to_user:
+            raise auth.exceptions.HTTPException(detail="Not authorized")
+
+        return api_key_to_user[api_key]
+
+    server.tool(say_hello_sync, permissions=["group1"])
+    server.tool(say_hello_async, permissions=["group1"])
+    server.tool(calculator, permissions=["group1"])
+
+    with get_sync_test_client(server, headers={"x-api-key": "1"}) as client:
+        tools = client.tools.list()
+        assert tools == [
+            {
+                "description": "Say hello.",
+                "id": "say_hello_sync@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
+                "name": "say_hello_sync",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
+            },
+            {
+                "description": "Say hello.",
+                "id": "say_hello_async@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
+                "name": "say_hello_async",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
+            },
+            {
+                "description": "Multiply two numbers.",
+                "id": "multiply@1.0.0",
+                "input_schema": {
+                    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+                    "required": ["a", "b"],
+                    "type": "object",
+                },
+                "name": "multiply",
+                "output_schema": {"type": "integer"},
+                "version": "1.0.0",
+            },
+        ]
+
+        result = client.tools.call("say_hello_sync", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
+
+        result = client.tools.call("say_hello_async", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
+
+        result = client.tools.call("multiply", {"a": 2, "b": 3})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": 6},
+            "success": True,
+        }

@@ -15,6 +15,8 @@ from open_tool_server._version import __version__
 from open_tool_server.auth import Auth
 from open_tool_server.tools import InjectedRequest
 
+from ..unit_tests.utils import AnyStr
+
 
 @asynccontextmanager
 async def get_async_test_client(
@@ -41,10 +43,10 @@ async def get_async_test_client(
         del client
 
 
-async def test_ok() -> None:
+async def test_health() -> None:
     app = Server()
     async with get_async_test_client(app) as client:
-        assert await client.ok() == "OK"
+        assert await client.health() == {"status": "OK"}
 
 
 async def test_info() -> None:
@@ -83,27 +85,36 @@ async def test_add_langchain_tool() -> None:
         data = await client.tools.list()
         assert data == [
             {
-                "inputSchema": {"properties": {}, "type": "object"},
                 "description": "Say hello.",
+                "id": "say_hello@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
-                "inputSchema": {
+                "description": "Echo the message back.",
+                "id": "echo@1.0.0",
+                "input_schema": {
                     "properties": {"msg": {"type": "string"}},
                     "required": ["msg"],
                     "type": "object",
                 },
-                "description": "Echo the message back.",
                 "name": "echo",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
-                "inputSchema": {
+                "description": "Add two integers.",
+                "id": "add@1.0.0",
+                "input_schema": {
                     "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
                     "required": ["x", "y"],
                     "type": "object",
                 },
-                "description": "Add two integers.",
                 "name": "add",
+                "output_schema": {"type": "integer"},
+                "version": "1.0.0",
             },
         ]
 
@@ -127,7 +138,12 @@ async def test_call_tool() -> None:
             "say_hello",
             {},
         )
-        assert response == "Hello"
+
+        assert response == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
 
 
 async def test_create_langchain_tools_from_server() -> None:
@@ -145,7 +161,7 @@ async def test_create_langchain_tools_from_server() -> None:
         return x + y
 
     async with get_async_test_client(app) as client:
-        tools = await client.tools.as_langchain_tools(select=["say_hello", "add"])
+        tools = await client.tools.as_langchain_tools(tool_ids=["say_hello", "add"])
         say_hello_client_side = tools[0]
         add_client_side = tools[1]
 
@@ -210,8 +226,11 @@ async def test_auth_list_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "inputSchema": {"properties": {}, "type": "object"},
+                "id": "say_hello@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             }
         ]
 
@@ -247,19 +266,21 @@ async def test_call_tool_with_auth() -> None:
     app.add_auth(auth)
 
     async with get_async_test_client(app, headers={"x-api-key": "1"}) as client:
-        assert await client.tools.call("say_hello", {}) == "Hello"
-
+        assert await client.tools.call("say_hello", {}) == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
     async with get_async_test_client(app, headers={"x-api-key": "2"}) as client:
         # `2` does not have permission to call `say_hello`
         with pytest.raises(HTTPStatusError) as exception_info:
-            assert await client.tools.call("say_hello", {}) == "Hello"
+            assert await client.tools.call("say_hello", {})
         assert exception_info.value.response.status_code == 403
 
     async with get_async_test_client(app, headers={"x-api-key": "3"}) as client:
         # `3` does not have permission to call `say_hello`
         with pytest.raises(HTTPStatusError) as exception_info:
-            assert await client.tools.call("say_hello", {}) == "Hello"
-
+            assert await client.tools.call("say_hello", {})
         assert exception_info.value.response.status_code == 401
 
 
@@ -294,27 +315,23 @@ async def test_call_tool_with_injected() -> None:
     app.add_auth(auth)
 
     async with get_async_test_client(app, headers={"x-api-key": "1"}) as client:
-        user_identity = await client.tools.call("get_user_identity", {})
-        assert user_identity == "some-user"
+        result = await client.tools.call("get_user_identity")
+        assert result["output"]["value"] == "some-user"
 
     async with get_async_test_client(app, headers={"x-api-key": "2"}) as client:
-        user_identity = await client.tools.call("get_user_identity", {})
-        assert user_identity == "another-user"
+        result = await client.tools.call("get_user_identity")
+        assert result["output"]["value"] == "another-user"
 
     async with get_async_test_client(app, headers={"x-api-key": "3"}) as client:
-        # Make sure this raises 401?
         with pytest.raises(HTTPStatusError) as exception_info:
             await client.tools.call("get_user_identity", {})
-
         assert exception_info.value.response.status_code == 403
 
     # Authenticated but tool does not exist
     async with get_async_test_client(app, headers={"x-api-key": "1"}) as client:
-        # Make sure this raises 401?
         with pytest.raises(HTTPStatusError) as exception_info:
             await client.tools.call("does_not_exist", {})
-
-        assert exception_info.value.response.status_code == 404
+        assert exception_info.value.response.status_code == 403
 
     # Not authenticated
     async with get_async_test_client(app, headers={"x-api-key": "6"}) as client:
@@ -376,25 +393,51 @@ async def test_exposing_existing_langchain_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "inputSchema": {"properties": {}, "type": "object"},
+                "id": "say_hello_sync@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_sync",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
                 "description": "Say hello.",
-                "inputSchema": {"properties": {}, "type": "object"},
+                "id": "say_hello_async@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_async",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
             },
             {
                 "description": "Multiply two numbers.",
-                "inputSchema": {
+                "id": "multiply@1.0.0",
+                "input_schema": {
                     "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
                     "required": ["a", "b"],
                     "type": "object",
                 },
                 "name": "multiply",
+                "output_schema": {"type": "integer"},
+                "version": "1.0.0",
             },
         ]
 
-        assert await client.tools.call("say_hello_sync", {}) == "Hello"
-        assert await client.tools.call("say_hello_async", {}) == "Hello"
-        assert await client.tools.call("multiply", {"a": 2, "b": 3}) == 6
+        result = await client.tools.call("say_hello_sync", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
+
+        result = await client.tools.call("say_hello_async", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "Hello"},
+            "success": True,
+        }
+
+        result = await client.tools.call("multiply", {"a": 2, "b": 3})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": 6},
+            "success": True,
+        }
