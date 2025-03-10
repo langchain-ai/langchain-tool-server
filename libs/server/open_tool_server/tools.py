@@ -18,7 +18,7 @@ from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
 from langchain_core.tools import tool as tool_decorator
 from langchain_core.utils.function_calling import convert_to_openai_function
 from pydantic import TypeAdapter
-from typing_extensions import TypedDict, NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 
 class RegisteredTool(TypedDict):

@@ -1,6 +1,5 @@
-from typing import TypedDict
-
 from langchain_core.tools import tool
+from typing_extensions import TypedDict
 
 from open_tool_server.tools import get_output_schema
 
