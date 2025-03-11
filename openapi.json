@@ -1,0 +1,357 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.0.3"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Index",
+        "operationId": "index__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "Get Info",
+        "description": "Get information about the server.",
+        "operationId": "get_info_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Are we OK?",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools": {
+      "get": {
+        "summary": "List Tools",
+        "description": "Lists available tools.",
+        "operationId": "list-tools",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ToolDefinition"
+                  },
+                  "type": "array",
+                  "title": "Response 200 List-Tools"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/call": {
+      "post": {
+        "summary": "Call Tool",
+        "description": "Call a tool by name with the provided payload.",
+        "operationId": "call-tool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallToolFullRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CallToolFullRequest": {
+        "properties": {
+          "$schema": {
+            "type": "string",
+            "const": "otc://1.0",
+            "title": "$Schema",
+            "description": "Protocol version.",
+            "default": "otc://1.0"
+          },
+          "request": {
+            "$ref": "#/components/schemas/CallToolRequest",
+            "description": "Request to call a tool."
+          }
+        },
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "title": "CallToolFullRequest",
+        "description": "Full request to call a tool."
+      },
+      "CallToolRequest": {
+        "properties": {
+          "tool_id": {
+            "type": "string",
+            "title": "Tool Id"
+          },
+          "input": {
+            "type": "object",
+            "title": "Input"
+          },
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool_id"
+        ],
+        "title": "CallToolRequest",
+        "description": "Request to call a tool."
+      },
+      "CallToolResponse": {
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ToolError"
+          }
+        },
+        "type": "object",
+        "required": [
+          "call_id",
+          "success"
+        ],
+        "title": "CallToolResponse",
+        "description": "Response from a tool execution."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InfoResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "InfoResponse",
+        "description": "Get information about the server."
+      },
+      "ToolDefinition": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "input_schema": {
+            "type": "object",
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "type": "object",
+            "title": "Output Schema"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "input_schema",
+          "output_schema",
+          "version"
+        ],
+        "title": "ToolDefinition",
+        "description": "Used in the response of the list tools endpoint."
+      },
+      "ToolError": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "developer_message": {
+            "type": "string",
+            "title": "Developer Message"
+          },
+          "can_retry": {
+            "type": "boolean",
+            "title": "Can Retry"
+          },
+          "additional_prompt_content": {
+            "type": "string",
+            "title": "Additional Prompt Content"
+          },
+          "retry_after_ms": {
+            "type": "integer",
+            "title": "Retry After Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ToolError",
+        "description": "Error message from the tool."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationErrorResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ValidationErrorResponse",
+        "description": "Validation error response."
+      }
+    }
+  }
+}
