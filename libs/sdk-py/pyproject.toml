@@ -1,7 +1,7 @@
 [project]
-name = "open-tool-client"
+name = "universal-tool-client"
 version = "0.0.1"
-description = "Open Tool Client SDK (Python)"
+description = "Universal Tool Client SDK (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
