@@ -40,3 +40,10 @@ jobs:
         shell: bash
         run: |
           make test
+
+      - name: Run Integration tests
+        # Only run this is the working-directory is server
+        if: ${{ inputs.working-directory == 'server' }}
+        shell: bash
+        run: |
+          make test-integration
