@@ -441,3 +441,75 @@ async def test_exposing_existing_langchain_tools() -> None:
             "output": {"value": 6},
             "success": True,
         }
+
+
+async def test_call_tool_by_version() -> None:
+    """Test calling a tool by version."""
+    app = Server()
+
+    @app.add_tool(version=1)
+    async def say_hello() -> str:
+        """Say hello."""
+        return "v1"
+
+    @app.add_tool(version="2.0.0")
+    async def say_hello() -> str:  # noqa: F811
+        """Say hello."""
+        return "v2"
+
+    async with get_async_test_client(app) as client:
+        tools = await client.tools.list()
+        assert tools == [
+            {
+                "description": "Say hello.",
+                "id": "say_hello@1.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
+                "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "1.0.0",
+            },
+            {
+                "description": "Say hello.",
+                "id": "say_hello@2.0.0",
+                "input_schema": {"properties": {}, "type": "object"},
+                "name": "say_hello",
+                "output_schema": {"type": "string"},
+                "version": "2.0.0",
+            },
+        ]
+
+        # call the tool by version
+        result = await client.tools.call("say_hello@1", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "v1"},
+            "success": True,
+        }
+
+        result = await client.tools.call("say_hello@1.0.0", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "v1"},
+            "success": True,
+        }
+
+        result = await client.tools.call("say_hello@2", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "v2"},
+            "success": True,
+        }
+
+        result = await client.tools.call("say_hello@2.0", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "v2"},
+            "success": True,
+        }
+
+        result = await client.tools.call("say_hello", {})
+        assert result == {
+            "call_id": AnyStr(),
+            "output": {"value": "v2"},
+            "success": True,
+        }

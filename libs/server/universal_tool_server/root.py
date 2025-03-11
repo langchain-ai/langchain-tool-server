@@ -19,10 +19,10 @@ async def index() -> str:
     html_content = f"""
     <html>
         <head>
-            <title>LangChain Tool Server</title>
+            <title>Universal Tool Server</title>
         </head>
         <body>
-            <h1>LangChain Tool Server</h1>
+            <h1>Universal Tool Server</h1>
             <p>
                 <ul>
                     <li><strong>Version</strong>: {__version__}</li>

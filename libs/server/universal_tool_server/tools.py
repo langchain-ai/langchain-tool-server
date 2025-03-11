@@ -60,7 +60,7 @@ class RegisteredTool(TypedDict):
 def _is_allowed(
     tool: RegisteredTool, request: Request | None, auth_enabled: bool
 ) -> bool:
-    """Check if the tool is listable."""
+    """Check if the requequest has required permissions to see / use the tool."""
     required_permissions = tool["permissions"]
 
     # If tool requests Request object, but one is not provided, then the tool is not
@@ -181,11 +181,43 @@ class ToolDefinition(TypedDict):
     """Version of the tool. Allows for semver versioning of tools."""
 
 
+def _normalize_version(
+    version: int | str | tuple[int, int, int],
+) -> tuple[int, int, int]:
+    """Normalize the version to a tuple of 3 integers, padding zeros if necessary."""
+    if isinstance(version, int):
+        if version < 0:
+            raise ValueError(f"Invalid version format: `{version}`")
+        return (version, 0, 0)
+
+    if isinstance(version, str):
+        version_parts = version.split(".")
+    elif isinstance(version, (tuple, list)):
+        version_parts = list(version)
+    else:
+        raise ValueError(f"Invalid version format: `{version}`")
+
+    if not 1 <= len(version_parts) <= 3:
+        raise ValueError(f"Invalid version format: `{version}`")
+
+    # Pad with zeros using faster concatenation
+    version_parts += [0] * (3 - len(version_parts))
+
+    version_tuple = tuple(map(int, version_parts))
+
+    if any(x < 0 for x in version_tuple):
+        raise ValueError(f"Invalid version format: `{version}`")
+
+    return cast(Tuple[int, int, int], version_tuple)
+
+
 class ToolHandler:
     def __init__(self) -> None:
         """Initializes the tool handler."""
         self.catalog: Dict[str, RegisteredTool] = {}
         self.auth_enabled = False
+        # Mapping from tool name to the latest version of the tool.
+        self.latest_version: Dict[str, RegisteredTool] = {}
 
     def add(
         self,
@@ -199,8 +231,7 @@ class ToolHandler:
 
         Args:
             tool: Implementation of the tool to register.
-            version (Union[int, str, Tuple[int, int, int]], optional): Version of the tool. Defaults to (1, 0, 0).
-
+            version: Version of the tool.
             permissions: Permissions required to call the tool.
         """
         # If not already a BaseTool, we'll convert it to one using
@@ -225,8 +256,11 @@ class ToolHandler:
 
             output_schema = get_output_schema(tool)
 
+            version = _normalize_version(version)
+            version_str = ".".join(map(str, version))
+
             registered_tool = {
-                "id": f"{tool.name}@1.0.0",
+                "id": f"{tool.name}@{version_str}",
                 "name": tool.name,
                 "description": tool.description,
                 "input_schema": convert_to_openai_function(tool)["parameters"],
@@ -235,21 +269,52 @@ class ToolHandler:
                 "permissions": cast(set[str], set(permissions or [])),
                 "accepts": accepts,
                 # Register everything as version 1.0.0 for now.
-                "version": (1, 0, 0),
+                "version": version,
             }
         else:
             raise AssertionError("Reached unreachable code")
 
-        if registered_tool["name"] in self.catalog:
+        if registered_tool["id"] in self.catalog:
             # Add unique ID to support duplicated tools?
-            raise ValueError(f"Tool {registered_tool['name']} already exists")
-        self.catalog[registered_tool["name"]] = registered_tool
+            raise ValueError(f"Tool {registered_tool['id']} already exists")
+        self.catalog[registered_tool["id"]] = registered_tool
+        # Add the latest version of the tool to the latest_version mapping.
+        name = registered_tool["name"]
+        if name in self.latest_version:
+            latest_version = self.latest_version[name]
+            latest_version_version = latest_version["version"]
+            if version > latest_version_version:
+                self.latest_version[name] = registered_tool
+        else:
+            self.latest_version[name] = registered_tool
 
     async def call_tool(
         self, call_tool_request: CallToolRequest, request: Request | None
     ) -> CallToolResponse:
         """Calls a tool by name with the provided payload."""
         tool_id = call_tool_request["tool_id"]
+
+        # Extract version from tool_id
+        components = tool_id.rsplit("@")
+        if len(components) == 1:
+            # No version specified, interpret as the name of the tool.
+            name = components[0]
+            tool_id = self.latest_version[name]["id"]
+        elif len(components) == 2:
+            name, version = components
+            normalized_version = _normalize_version(version)
+            tool_id = f"{name}@{'.'.join(map(str, normalized_version))}"
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Invalid tool ID. Tool ID must be in the format `name@version`. "
+                    "The version is optional and defaults to the latest version. "
+                    "If specified the version must be "
+                    "in the format `major.minor.patch` or `major`.",
+                ),
+            )
+
         args = call_tool_request.get("input", {})
         call_id = call_tool_request.get("call_id", uuid.uuid4())
 

@@ -1,4 +1,4 @@
-from typing import Callable, Optional, TypeVar, Union, overload
+from typing import Callable, Optional, Tuple, TypeVar, Union, overload
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -48,16 +48,28 @@ class Server:
             self.app.mount(MCP_APP_PREFIX, create_mcp_app(self.tool_handler))
 
     @overload
-    def add_tool(self, fn: T, *, permissions: list[str] | None = None) -> T: ...
+    def add_tool(
+        self,
+        fn: T,
+        *,
+        permissions: list[str] | None = None,
+        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
+    ) -> T: ...
 
     @overload
-    def add_tool(self, *, permissions: list[str] | None = None) -> Callable[[T], T]: ...
+    def add_tool(
+        self,
+        *,
+        permissions: list[str] | None = None,
+        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
+    ) -> Callable[[T], T]: ...
 
     def add_tool(
         self,
         fn: Optional[T] = None,
         *,
         permissions: list[str] | None = None,
+        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
     ) -> Union[T, Callable[[T], T]]:
         """Use to add a tool to the server.
 
@@ -86,7 +98,7 @@ class Server:
         """
 
         def decorator(fn: T) -> T:
-            self.tool_handler.add(fn, permissions=permissions)
+            self.tool_handler.add(fn, permissions=permissions, version=version)
             # Return the original. The decorator is only to register the tool.
             return fn
 
