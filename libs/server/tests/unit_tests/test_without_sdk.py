@@ -90,12 +90,12 @@ async def test_lifespan() -> None:
         assert response.status_code == 200
         assert calls == ["startup"]
         response = client.post(
-            "/tools/call", json={"tool_id": "what_is_foo", "input": {}}
+            "/tools/call", json={"request": {"tool_id": "what_is_foo", "input": {}}}
         )
         response.raise_for_status()
         result = response.json()
         assert result == {
-            "output": {"value": "bar"},
+            "value": "bar",
             "success": True,
             "call_id": AnyStr(),
         }

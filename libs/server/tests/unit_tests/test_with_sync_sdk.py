@@ -143,7 +143,7 @@ def test_call_tool() -> None:
 
         assert response == {
             "call_id": AnyStr(),
-            "output": {"value": "Hello"},
+            "value": "Hello",
             "success": True,
         }
 
@@ -270,7 +270,7 @@ async def test_call_tool_with_auth() -> None:
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
         assert client.tools.call("say_hello", {}) == {
             "call_id": AnyStr(),
-            "output": {"value": "Hello"},
+            "value": "Hello",
             "success": True,
         }
     with get_sync_test_client(app, headers={"x-api-key": "2"}) as client:
@@ -318,11 +318,11 @@ async def test_call_tool_with_injected() -> None:
 
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
         result = client.tools.call("get_user_identity")
-        assert result["output"]["value"] == "some-user"
+        assert result["value"] == "some-user"
 
     with get_sync_test_client(app, headers={"x-api-key": "2"}) as client:
         result = client.tools.call("get_user_identity")
-        assert result["output"]["value"] == "another-user"
+        assert result["value"] == "another-user"
 
     with get_sync_test_client(app, headers={"x-api-key": "3"}) as client:
         with pytest.raises(HTTPStatusError) as exception_info:
@@ -426,20 +426,20 @@ async def test_exposing_existing_langchain_tools() -> None:
         result = client.tools.call("say_hello_sync", {})
         assert result == {
             "call_id": AnyStr(),
-            "output": {"value": "Hello"},
+            "value": "Hello",
             "success": True,
         }
 
         result = client.tools.call("say_hello_async", {})
         assert result == {
             "call_id": AnyStr(),
-            "output": {"value": "Hello"},
+            "value": "Hello",
             "success": True,
         }
 
         result = client.tools.call("multiply", {"a": 2, "b": 3})
         assert result == {
             "call_id": AnyStr(),
-            "output": {"value": 6},
+            "value": 6,
             "success": True,
         }

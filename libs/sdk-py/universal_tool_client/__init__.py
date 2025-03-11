@@ -35,7 +35,7 @@ def _get_headers(custom_headers: Optional[dict[str, str]]) -> dict[str, str]:
     """Combine api_key and custom user-provided headers."""
     custom_headers = custom_headers or {}
     headers = {
-        "User-Agent": f"open-tool-sdk-py/{__version__}",
+        "User-Agent": f"universal-tool-sdk-py/{__version__}",
         **custom_headers,
     }
     return headers
@@ -387,7 +387,8 @@ class AsyncToolsClient:
             payload["input"] = args
         if call_id is not None:
             payload["call_id"] = call_id
-        return await self.http.post("/tools/call", json=payload)
+        request = {"request": payload, "$schema": "otc://1.0"}
+        return await self.http.post("/tools/call", json=request)
 
     async def as_langchain_tools(
         self, *, tool_ids: Sequence[str] | None = None
@@ -434,7 +435,7 @@ class AsyncToolsClient:
                         "An error occurred while calling the tool. "
                         "The client does not yet support error handling."
                     )
-                return call_tool_result["output"]["value"]
+                return call_tool_result["value"]
 
             return call_tool
 
@@ -479,7 +480,11 @@ class SyncToolsClient:
             payload["input"] = args
         if call_id is not None:
             payload["call_id"] = call_id
-        return self.http.post("/tools/call", json=payload)
+        request = {
+            "$schema": "otc://1.0",
+            "request": payload,
+        }
+        return self.http.post("/tools/call", json=request)
 
     def as_langchain_tools(
         self, *, tool_ids: Sequence[str] | None = None
@@ -526,7 +531,7 @@ class SyncToolsClient:
                         "An error occurred while calling the tool. "
                         "The client does not yet support error handling."
                     )
-                return call_tool_result["output"]["value"]
+                return call_tool_result["value"]
 
             return call_tool
 
