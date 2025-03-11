@@ -4,6 +4,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Literal,
     Union,
     cast,
     get_type_hints,
@@ -89,13 +90,11 @@ class CallToolRequest(TypedDict):
     """Trace ID."""
 
 
-class CallToolFullRequest(TypedDict):
-    """Call a tool with the full request."""
-
-    # schema: NotRequired[Literal["otc://1.0"]]
-    # """Schema version. If not provided, defaults to the latest supported version."""
-    request: CallToolRequest
-    """The request to call the tool."""
+# Not using `class` syntax b/c $schema is not a valid attribute name.
+CallToolFullRequest = TypedDict(
+    "CallToolFullRequest",
+    {"$schema": NotRequired[Literal["otc://1.0"]], "request": CallToolRequest},
+)
 
 
 class ToolError(TypedDict):
@@ -396,9 +395,11 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
 
     @router.post("/call", operation_id="call-tool")
     async def call_tool(
-        call_tool_request: CallToolRequest, request: Request
+        call_tool_request: CallToolFullRequest, request: Request
     ) -> CallToolResponse:
         """Call a tool by name with the provided payload."""
+        raise ValueError(call_tool_request)
+        call_tool_request = call_tool_request["request"]
         return await tool_handler.call_tool(call_tool_request, request)
 
     return router
