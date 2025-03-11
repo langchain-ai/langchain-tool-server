@@ -18,7 +18,7 @@ Users working in a local environment that need MCP, [can enable MCP support](#MC
 ## Installation
 
 ```bash
-pip install open-tool-server open-tool-client
+pip install universal-tool-server open-tool-client
 ```
 
 ## Example Usage
@@ -31,12 +31,13 @@ Add a server.py file to your project and define your tools with type hints.
 from typing import Annotated
 from starlette.requests import Request
 
-from open_tool_server.tools import InjectedRequest
-from open_tool_server import Server, Auth
+from universal_tool_server.tools import InjectedRequest
+from universal_tool_server import Server, Auth
 
 app = Server()
 auth = Auth()
 app.add_auth(auth)
+
 
 @auth.authenticate
 async def authenticate(headers: dict[bytes, bytes]) -> dict:
@@ -56,14 +57,14 @@ async def authenticate(headers: dict[bytes, bytes]) -> dict:
 
 # Define tools
 
-@app.tool(permissions=["group1"])
+@app.add_tool(permissions=["group1"])
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
 
 
 # Tool that has access to the request object
-@app.tool(permissions=["authenticated"])
+@app.add_tool(permissions=["authenticated"])
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
     """Get the user identity."""
     return request.user.identity
@@ -72,13 +73,15 @@ async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
 # You can also expose existing LangChain tools!
 from langchain_core.tools import tool
 
+
 @tool()
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
+
 # Add an existing LangChain tool to the server with permissions!
-app.tool(say_hello, permissions=["group2"])
+app.add_tool(say_hello, permissions=["group2"])
 ```
 
 ### Client
@@ -94,7 +97,7 @@ from open_tool_client import get_async_client
 async def main():
     if len(sys.argv) < 2:
         print(
-            "Usage: uv run client.py url of open-tool-server  (i.e. http://localhost:8080/)>"
+            "Usage: uv run client.py url of universal-tool-server  (i.e. http://localhost:8080/)>"
         )
         sys.exit(1)
 
@@ -179,11 +182,12 @@ You can enable support for the MCP SSE protocol by passing `enable_mcp=True` to 
 > Auth is not supported when using MCP SSE. So if you try to use auth and enable MCP, the server will raise an exception by design.
 
 ```python
-from open_tool_server import Server
+from universal_tool_server import Server
 
 app = Server(enable_mcp=True)
 
-@app.tool()
+
+@app.add_tool()
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
@@ -218,7 +222,7 @@ async def main() -> None:
 A tool is a function that can be called by the client. It can be a simple function or a coroutine. The function signature should have type hints. The server will use these type hints to validate the input and output of the tool.
 
 ```python
-@app.tool()
+@app.add_tool()
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
@@ -229,7 +233,7 @@ async def add(x: int, y: int) -> int:
 You can specify `permissions` for a tool. The client must have the required permissions to call the tool. If the client does not have the required permissions, the server will return a 403 Forbidden error.
 
 ```python
-@app.tool(permissions=["group1"])
+@app.add_tool(permissions=["group1"])
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
@@ -243,10 +247,11 @@ A tool can request access to Starlette's `Request` object by using the `Injected
 
 ```python
 from typing import Annotated
-from open_tool_server import InjectedRequest
+from universal_tool_server import InjectedRequest
 from starlette.requests import Request
 
-@app.tool(permissions=["group1"])
+
+@app.add_tool(permissions=["group1"])
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
     """Return the user's identity"""
     # The `user` attribute can be used to retrieve the user object.
@@ -301,7 +306,7 @@ The function should either:
 2. Raise an `auth.exceptions.HTTPException` if the request cannot be authenticated.
 
 ```python
-from open_tool_server import Auth
+from universal_tool_server import Auth
 
 auth = Auth()
 

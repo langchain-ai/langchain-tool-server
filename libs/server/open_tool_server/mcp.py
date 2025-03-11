@@ -8,7 +8,7 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.routing import Mount, Route
 
-from open_tool_server.tools import ToolHandler
+from universal_tool_server.tools import CallToolRequest, ToolHandler
 
 if TYPE_CHECKING:
     from mcp.types import EmbeddedResource, ImageContent, TextContent
@@ -67,7 +67,7 @@ def create_mcp_app(tool_handler: ToolHandler) -> Starlette:
             Tool(
                 name=tool["name"],
                 description=tool["description"],
-                inputSchema=tool["inputSchema"],
+                inputSchema=tool["input_schema"],
             )
             for tool in await tool_handler.list_tools(request=None)
         ]
@@ -81,7 +81,11 @@ def create_mcp_app(tool_handler: ToolHandler) -> Starlette:
         # We'll send a None for the request object.
         # This means that if Auth is enabled, the MCP endpoint will not
         # list any tools that require authentication.
-        result = await tool_handler.call_tool(name, arguments, request=None)
+        call_tool_request: CallToolRequest = {
+            "tool_id": name,
+            "input": arguments,
+        }
+        result = await tool_handler.call_tool(call_tool_request, request=None)
         return _convert_to_content(result)
 
     async def handle_sse(request: Request):

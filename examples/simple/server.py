@@ -1,24 +1,24 @@
 #!/usr/bin/env python
-from open_tool_server import Server
-from open_tool_server.auth import Auth
+from universal_tool_server import Server
+from universal_tool_server.auth import Auth
 
 app = Server()
 auth = Auth()
 
 
-@app.tool()
+@app.add_tool()
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
 
 
-@app.tool
+@app.add_tool
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
 
 
-@app.tool()
+@app.add_tool()
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"

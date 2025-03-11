@@ -118,7 +118,7 @@ Parameters:
 ???+ example "Examples"
     Basic authentication with token:
     ```python
-    from open_tool_server.auth import Auth
+    from universal_tool_server.auth import Auth
 
     auth = Auth()
 

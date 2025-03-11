@@ -10,10 +10,10 @@ from open_tool_client import SyncClient
 from starlette.authentication import BaseUser
 from starlette.requests import Request
 
-from open_tool_server import Server
-from open_tool_server._version import __version__
-from open_tool_server.auth import Auth
-from open_tool_server.tools import InjectedRequest
+from universal_tool_server import Server
+from universal_tool_server._version import __version__
+from universal_tool_server.auth import Auth
+from universal_tool_server.tools import InjectedRequest
 
 from ..unit_tests.utils import AnyStr
 
@@ -68,17 +68,17 @@ def test_add_langchain_tool() -> None:
         tools = client.tools.list()
         assert tools == []
 
-    @app.tool
+    @app.add_tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.tool
+    @app.add_tool
     def echo(msg: str) -> str:
         """Echo the message back."""
         return msg
 
-    @app.tool
+    @app.add_tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
@@ -125,12 +125,12 @@ def test_call_tool() -> None:
     """Test call parameterless tool."""
     app = Server()
 
-    @app.tool
+    @app.add_tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.tool
+    @app.add_tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
@@ -152,12 +152,12 @@ def test_create_langchain_tools_from_server() -> None:
     """Test create langchain tools from server."""
     app = Server()
 
-    @app.tool
+    @app.add_tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.tool
+    @app.add_tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
@@ -203,12 +203,12 @@ def test_auth_list_tools() -> None:
     auth = Auth()
     app.add_auth(auth)
 
-    @app.tool(permissions=["group1"])
+    @app.add_tool(permissions=["group1"])
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.tool(permissions=["group2"])
+    @app.add_tool(permissions=["group2"])
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
@@ -243,7 +243,7 @@ async def test_call_tool_with_auth() -> None:
     """Test calling a tool with authentication provided."""
     app = Server()
 
-    @app.tool(permissions=["group1"])
+    @app.add_tool(permissions=["group1"])
     def say_hello(request: Annotated[Request, InjectedRequest]) -> str:
         """Say hello."""
         return "Hello"
@@ -290,7 +290,7 @@ async def test_call_tool_with_injected() -> None:
     """Test calling a tool with an injected request."""
     app = Server()
 
-    @app.tool(permissions=["authorized"])
+    @app.add_tool(permissions=["authorized"])
     def get_user_identity(request: Annotated[Request, InjectedRequest]) -> str:
         """Get the user's identity."""
         return request.user.identity
@@ -386,9 +386,9 @@ async def test_exposing_existing_langchain_tools() -> None:
 
         return api_key_to_user[api_key]
 
-    server.tool(say_hello_sync, permissions=["group1"])
-    server.tool(say_hello_async, permissions=["group1"])
-    server.tool(calculator, permissions=["group1"])
+    server.add_tool(say_hello_sync, permissions=["group1"])
+    server.add_tool(say_hello_async, permissions=["group1"])
+    server.add_tool(calculator, permissions=["group1"])
 
     with get_sync_test_client(server, headers={"x-api-key": "1"}) as client:
         tools = client.tools.list()

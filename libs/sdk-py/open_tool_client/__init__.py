@@ -111,7 +111,7 @@ class AsyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return await _adecode_json(r)
 
@@ -129,7 +129,7 @@ class AsyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return await _adecode_json(r)
 
@@ -144,7 +144,7 @@ class AsyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return await _adecode_json(r)
 
@@ -159,7 +159,7 @@ class AsyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return await _adecode_json(r)
 
@@ -173,7 +173,7 @@ class AsyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
 
 
@@ -191,7 +191,7 @@ class SyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return _decode_json(r)
 
@@ -209,7 +209,7 @@ class SyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return _decode_json(r)
 
@@ -224,7 +224,7 @@ class SyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return _decode_json(r)
 
@@ -239,7 +239,7 @@ class SyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
         return _decode_json(r)
 
@@ -253,7 +253,7 @@ class SyncHttpClient:
             if sys.version_info >= (3, 11):
                 e.add_note(body)
             else:
-                logger.error(f"Error from open-tool-server: {body}", exc_info=e)
+                logger.error(f"Error from universal-tool-server: {body}", exc_info=e)
             raise e
 
 

@@ -352,7 +352,7 @@ class InjectedRequest(InjectedToolArg):
         ..code-block:: python
 
             from typing import Annotated
-            from open_tool_server.server.tools import InjectedRequest
+            from universal_tool_server.server.tools import InjectedRequest
             from starlette.requests import Request
 
             @app.tool(permissions=["group1"])

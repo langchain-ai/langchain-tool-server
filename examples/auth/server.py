@@ -3,8 +3,8 @@ from typing import Annotated
 
 from starlette.requests import Request
 
-from open_tool_server import Auth, Server
-from open_tool_server.tools import InjectedRequest
+from universal_tool_server import Auth, Server
+from universal_tool_server.tools import InjectedRequest
 
 app = Server()
 auth = Auth()
@@ -30,19 +30,19 @@ async def authenticate(headers: dict[bytes, bytes]) -> dict:
 app.add_auth(auth)
 
 
-@app.tool(permissions=["group1"])
+@app.add_tool(permissions=["group1"])
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
 
 
-@app.tool(permissions=["group2"])
+@app.add_tool(permissions=["group2"])
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
 
-@app.tool(permissions=["authenticated"])
+@app.add_tool(permissions=["authenticated"])
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
     """Get the user identity."""
     return request.user.identity

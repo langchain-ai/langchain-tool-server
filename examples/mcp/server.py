@@ -1,21 +1,21 @@
-from open_tool_server import Server
+from universal_tool_server import Server
 
 app = Server(enable_mcp=True)
 
 
-@app.tool()
+@app.add_tool()
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
 
 
-@app.tool
+@app.add_tool
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
 
 
-@app.tool()
+@app.add_tool()
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"

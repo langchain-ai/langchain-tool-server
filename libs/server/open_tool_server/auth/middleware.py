@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import JSONResponse, Response
 
-from open_tool_server.auth import Auth
+from universal_tool_server.auth import Auth
 
 SUPPORTED_PARAMETERS = {
     "request": Request,

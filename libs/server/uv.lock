@@ -470,7 +470,7 @@ test = [
 ]
 
 [[package]]
-name = "open-tool-server"
+name = "universal-tool-server"
 version = "0.0.2"
 source = { editable = "." }
 dependencies = [

@@ -162,7 +162,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "langgraph-prebuilt" },
     { name = "open-tool-client" },
-    { name = "open-tool-server" },
+    { name = "universal-tool-server" },
 ]
 
 [package.dev-dependencies]
@@ -176,7 +176,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.3.5" },
     { name = "langgraph-prebuilt", specifier = ">=0.1.2" },
     { name = "open-tool-client", directory = "../libs/sdk-py" },
-    { name = "open-tool-server", directory = "../libs/server" },
+    { name = "universal-tool-server", directory = "../libs/server" },
 ]
 
 [package.metadata.requires-dev]
@@ -511,7 +511,7 @@ test = [
 ]
 
 [[package]]
-name = "open-tool-server"
+name = "universal-tool-server"
 version = "0.1.0"
 source = { directory = "../libs/server" }
 dependencies = [

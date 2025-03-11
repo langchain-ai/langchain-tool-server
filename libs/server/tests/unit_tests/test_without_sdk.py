@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from starlette.requests import Request
 
-from open_tool_server import Server
-from open_tool_server._version import __version__
-from open_tool_server.tools import InjectedRequest
+from universal_tool_server import Server
+from universal_tool_server._version import __version__
+from universal_tool_server.tools import InjectedRequest
 
 from ..unit_tests.utils import AnyStr
 
@@ -78,7 +78,7 @@ async def test_lifespan() -> None:
 
     app = Server(lifespan=lifespan)
 
-    @app.tool()
+    @app.add_tool()
     def what_is_foo(request: Annotated[Request, InjectedRequest]) -> str:
         """Get foo"""
         return request.state.foo

@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 from typing_extensions import TypedDict
 
-from open_tool_server.tools import get_output_schema
+from universal_tool_server.tools import get_output_schema
 
 
 async def test_get_output_schema() -> None:

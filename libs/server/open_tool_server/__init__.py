@@ -4,14 +4,14 @@ from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.types import Lifespan, Receive, Scope, Send
 
-from open_tool_server import root
-from open_tool_server._version import __version__
-from open_tool_server.auth import Auth
-from open_tool_server.auth.middleware import (
+from universal_tool_server import root
+from universal_tool_server._version import __version__
+from universal_tool_server.auth import Auth
+from universal_tool_server.auth.middleware import (
     ServerAuthenticationBackend,
     on_auth_error,
 )
-from open_tool_server.tools import InjectedRequest, ToolHandler, create_tools_router
+from universal_tool_server.tools import InjectedRequest, ToolHandler, create_tools_router
 
 T = TypeVar("T", bound=Callable)
 
@@ -39,29 +39,31 @@ class Server:
         self._enable_mcp = enable_mcp
 
         if enable_mcp:
-            from open_tool_server.mcp import MCP_APP_PREFIX, create_mcp_app
+            from universal_tool_server.mcp import MCP_APP_PREFIX, create_mcp_app
 
             self.app.mount(MCP_APP_PREFIX, create_mcp_app(self.tool_handler))
 
     @overload
-    def tool(self, fn: T, *, permissions: list[str] | None = None) -> T: ...
+    def add_tool(self, fn: T, *, permissions: list[str] | None = None) -> T: ...
 
     @overload
-    def tool(self, *, permissions: list[str] | None = None) -> Callable[[T], T]: ...
+    def add_tool(self, *, permissions: list[str] | None = None) -> Callable[[T], T]: ...
 
-    def tool(
+    def add_tool(
         self,
         fn: Optional[T] = None,
         *,
         permissions: list[str] | None = None,
     ) -> Union[T, Callable[[T], T]]:
-        """A decorator adds an existing function as a tool.
+        """Use to add a tool to the server.
+
+        This method works as either a decorator or a function.
 
         Can be used both with and without parentheses:
 
         Example with parentheses:
 
-            @app.tool()
+            @app.add_tool()
             async def echo(msg: str) -> str:
                 return msg + "!"
 
@@ -70,6 +72,13 @@ class Server:
             @app.tool
             async def add(x: int, y: int) -> int:
                 return x + y
+
+        Example as a function:
+
+            async def echo(msg: str) -> str:
+                return msg + "!"
+
+            app.add_tool(echo)
         """
 
         def decorator(fn: T) -> T:
