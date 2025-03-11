@@ -1,3 +1,5 @@
+from typing import Any
+
 from langchain_core.tools import tool
 from typing_extensions import TypedDict
 
@@ -33,3 +35,25 @@ async def test_get_output_schema() -> None:
         "title": "Foo",
         "type": "object",
     }
+
+    @tool
+    def void_tool() -> None:
+        """Hello"""
+        pass
+
+    assert get_output_schema(void_tool) == {"type": "null"}
+
+    @tool
+    def any_tool() -> Any:
+        """Hello"""
+        pass
+
+    assert get_output_schema(any_tool) == {}
+
+    # Unspecified return type (same as Any)
+    @tool
+    def unspecified_tool():
+        """Hello"""
+        pass
+
+    assert get_output_schema(unspecified_tool) == {}

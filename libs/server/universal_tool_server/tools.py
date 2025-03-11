@@ -90,7 +90,7 @@ class CallToolRequest(TypedDict):
     """Trace ID."""
 
 
-class Error(TypedDict):
+class ToolError(TypedDict):
     """Error message from the tool."""
 
     message: str
@@ -125,27 +125,6 @@ class ToolException(Exception):
         self.retry_after_ms = retry_after_ms
 
 
-class ToolError(TypedDict):
-    """Error message from the tool."""
-
-    error: Error
-
-
-class Value(TypedDict):
-    """A successful value from the tool invocation."""
-
-    value: Any
-
-
-ToolOutput = Union[ToolError, Value]
-"""Output from a tool invocation.
-
-The output will be of type Value if the tool invocation was successful.
-
-Otherwise, the output should be of type ToolError.
-"""
-
-
 class CallToolResponse(TypedDict):
     """Response from a tool execution."""
 
@@ -155,8 +134,11 @@ class CallToolResponse(TypedDict):
     success: bool
     """Whether the execution was successful."""
 
-    output: ToolOutput
+    value: NotRequired[Any]
     """The output of the tool execution."""
+
+    error: NotRequired[ToolError]
+    """Error message from the tool."""
 
 
 class ToolDefinition(TypedDict):
