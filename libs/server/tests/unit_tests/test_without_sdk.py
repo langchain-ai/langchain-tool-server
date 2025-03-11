@@ -95,7 +95,7 @@ async def test_lifespan() -> None:
         response.raise_for_status()
         result = response.json()
         assert result == {
-            "output": {"value": "bar"},
+            "value": "bar",
             "success": True,
             "call_id": AnyStr(),
         }

@@ -4,7 +4,6 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    Tuple,
     Union,
     cast,
     get_type_hints,
@@ -48,7 +47,7 @@ class RegisteredTool(TypedDict):
 
     would have an entry in the `accepts` list as ("request", Request).
     """
-    version: Tuple[int, int, int]
+    version: tuple[int, int, int]
     """Version of the tool. Allows for semver versioning of tools.
 
     The version is a tuple of three integers: (major, minor, patch).
@@ -88,6 +87,15 @@ class CallToolRequest(TypedDict):
     """Execution ID."""
     trace_id: NotRequired[str]
     """Trace ID."""
+
+
+class CallToolFullRequest(TypedDict):
+    """Call a tool with the full request."""
+
+    # schema: NotRequired[Literal["otc://1.0"]]
+    # """Schema version. If not provided, defaults to the latest supported version."""
+    request: CallToolRequest
+    """The request to call the tool."""
 
 
 class ToolError(TypedDict):
@@ -170,7 +178,7 @@ def _normalize_version(
     if isinstance(version, int):
         if version < 0:
             raise ValueError(f"Invalid version format: `{version}`")
-        return (version, 0, 0)
+        return version, 0, 0
 
     if isinstance(version, str):
         version_parts = version.split(".")
@@ -190,7 +198,7 @@ def _normalize_version(
     if any(x < 0 for x in version_tuple):
         raise ValueError(f"Invalid version format: `{version}`")
 
-    return cast(Tuple[int, int, int], version_tuple)
+    return cast(tuple[int, int, int], version_tuple)
 
 
 class ToolHandler:
@@ -207,7 +215,7 @@ class ToolHandler:
         *,
         permissions: list[str] | None = None,
         # Default to version 1.0.0
-        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
+        version: Union[int, str, tuple[int, int, int]] = (1, 0, 0),
     ) -> None:
         """Register a tool in the catalog.
 
@@ -354,11 +362,7 @@ class ToolHandler:
             # This is an internal error
             raise AssertionError(f"Invalid tool implementation: {type(fn)}")
 
-        return {
-            "success": True,
-            "call_id": str(call_id),
-            "output": {"value": tool_output},
-        }
+        return {"success": True, "call_id": str(call_id), "value": tool_output}
 
     async def list_tools(self, request: Request | None) -> list[ToolDefinition]:
         """Lists all available tools in the catalog."""

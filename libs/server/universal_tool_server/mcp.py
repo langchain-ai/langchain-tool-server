@@ -95,8 +95,12 @@ def create_mcp_app(tool_handler: ToolHandler) -> Starlette:
             "tool_id": name,
             "input": arguments,
         }
-        result = await tool_handler.call_tool(call_tool_request, request=None)
-        return _convert_to_content(result)
+        response = await tool_handler.call_tool(call_tool_request, request=None)
+        if not response["success"]:
+            raise NotImplementedError(
+                "Support for error messages is not yet implemented."
+            )
+        return _convert_to_content(response["value"])
 
     async def handle_sse(request: Request):
         async with sse.connect_sse(
