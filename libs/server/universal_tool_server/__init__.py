@@ -1,6 +1,7 @@
 from typing import Callable, Optional, Tuple, TypeVar, Union, overload
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.types import Lifespan, Receive, Scope, Send
 
@@ -15,6 +16,7 @@ from universal_tool_server.tools import (
     InjectedRequest,
     ToolHandler,
     create_tools_router,
+    validation_exception_handler,
 )
 
 T = TypeVar("T", bound=Callable)
@@ -27,7 +29,13 @@ class Server:
         self, *, lifespan: Lifespan | None = None, enable_mcp: bool = False
     ) -> None:
         """Initialize the server."""
-        self.app = FastAPI(version=__version__, lifespan=lifespan)
+        self.app = FastAPI(
+            version=__version__,
+            lifespan=lifespan,
+        )
+
+        # Add a global exception handler for validation errors
+        self.app.exception_handler(RequestValidationError)(validation_exception_handler)
         # Routes that go under `/`
         self.app.include_router(root.router)
         # Create a tool handler

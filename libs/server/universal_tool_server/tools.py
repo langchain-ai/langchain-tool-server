@@ -11,8 +11,10 @@ from typing import (
 )
 
 import structlog
-from fastapi import APIRouter, HTTPException
-from fastapi.requests import Request
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from jsonschema_rs import validator_for
 from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
 from langchain_core.tools import tool as tool_decorator
@@ -389,11 +391,22 @@ class ToolHandler:
         return tool_definitions
 
 
+class ValidationErrorResponse(TypedDict):
+    message: str
+
+
 def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
     """Creates an API router for tools."""
     router = APIRouter()
 
-    @router.get("", operation_id="list-tools")
+    @router.get(
+        "",
+        operation_id="list-tools",
+        responses={
+            200: {"model": list[ToolDefinition]},
+            422: {"model": ValidationErrorResponse},
+        },
+    )
     async def list_tools(request: Request) -> list[ToolDefinition]:
         """Lists available tools."""
         return await tool_handler.list_tools(request)
@@ -459,3 +472,18 @@ def get_output_schema(tool: BaseTool) -> dict:
         logger.aerror(f"Error getting output schema: {e} for tool {tool}")
         # Generate a schema for any type
         return {}
+
+
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Exception translation for validation errors.
+
+    This will match the shape of the error response to the one implemented by
+    the tool calling spec.
+    """
+    msg = f"{exc.body} with {exc.errors()}"
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"message": msg}),
+    )
