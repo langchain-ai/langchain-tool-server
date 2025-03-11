@@ -63,14 +63,24 @@ def create_mcp_app(tool_handler: ToolHandler) -> Starlette:
         # We'll send a None for the request object.
         # This means that if Auth is enabled, the MCP endpoint will not
         # list any tools that require authentication.
-        return [
-            Tool(
-                name=tool["name"],
-                description=tool["description"],
-                inputSchema=tool["input_schema"],
+
+        tools = []
+
+        for tool in await tool_handler.list_tools(request=None):
+            # MCP has no concept of tool versions, so we'll only
+            # return the latest version.
+            if tool_handler.latest_version[tool["name"]]["id"] != tool["id"]:
+                continue
+
+            tools.append(
+                Tool(
+                    name=tool["name"],
+                    description=tool["description"],
+                    inputSchema=tool["input_schema"],
+                )
             )
-            for tool in await tool_handler.list_tools(request=None)
-        ]
+
+        return tools
 
     @server.call_tool()
     async def call_tool(
