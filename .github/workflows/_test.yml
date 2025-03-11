@@ -46,4 +46,4 @@ jobs:
         if: ${{ inputs.working-directory == './libs/server' }}
         shell: bash
         run: |
-          make test-integration
+          make test_integration
