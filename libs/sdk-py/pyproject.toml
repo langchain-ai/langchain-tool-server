@@ -1,6 +1,6 @@
 [project]
 name = "universal-tool-client"
-version = "0.0.1"
+version = "0.0.2"
 description = "Universal Tool Client SDK (Python)"
 readme = "README.md"
 requires-python = ">=3.10"

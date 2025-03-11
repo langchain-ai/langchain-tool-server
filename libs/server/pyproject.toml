@@ -1,6 +1,6 @@
 [project]
 name = "universal-tool-server"
-version = "0.0.2"
+version = "0.0.3"
 description = "Universal Tool Server (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
