@@ -392,6 +392,8 @@ class ToolHandler:
 
 
 class ValidationErrorResponse(TypedDict):
+    """Validation error response."""
+
     message: str
 
 
