@@ -299,6 +299,14 @@ class ToolHandler:
         if len(components) == 1:
             # No version specified, interpret as the name of the tool.
             name = components[0]
+            if name not in self.latest_version:
+                if self.auth_enabled:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Tool either does not exist or insufficient permissions",
+                    )
+
+                raise HTTPException(status_code=404, detail=f"Tool {name} not found")
             tool_id = self.latest_version[name]["id"]
         elif len(components) == 2:
             name, version = components
