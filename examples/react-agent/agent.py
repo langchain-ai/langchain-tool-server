@@ -4,7 +4,7 @@ import os
 from langchain_anthropic import ChatAnthropic
 from langgraph.prebuilt import create_react_agent
 
-from open_tool_client import get_sync_client
+from universal_tool_client import get_sync_client
 
 if "ANTHROPIC_API_KEY" not in os.environ:
     raise ValueError("Please set ANTHROPIC_API_KEY in the environment.")

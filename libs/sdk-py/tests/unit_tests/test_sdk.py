@@ -3,7 +3,7 @@
 
 def test_attempt_import() -> None:
     """Simple test to just verify that the module can be imported."""
-    from open_tool_client import (  # noqa: F401
+    from universal_tool_client import (  # noqa: F401
         AsyncClient,
         SyncClient,
         get_async_client,
