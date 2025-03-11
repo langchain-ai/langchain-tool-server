@@ -16,14 +16,23 @@ test:
 test_watch:
 	uv run ptw . -- $(TEST_FILE)
 
+.PHONY: test_integration
 
+test_integration:
+	uv run uvicorn tests.integration.mcp_server:app --host localhost --port 8133 --reload & \
+	pid=$$!; \
+	trap "kill -9 $$pid" EXIT; \
+	while [ "$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8133/health)" != "200" ]; do \
+	  sleep 0.2; \
+	done; \
+	MCP_SSE_URL="http://localhost:8133/mcp/sse" uv run pytest tests/integration
 
 start_mcp:
 	# start mcp server for integration tsets
-	uv run uvicorn tests.integration.mcp_server:app --host localhost --port 8131 --reload
+	uv run uvicorn tests.integration.mcp_server:app --host localhost --port 8133 --reload
 
 
-test_integration:
+run_integration_test:
 	uv run pytest tests/integration
 
 

@@ -1,5 +1,6 @@
 """Integration test to test the MCP server."""
 
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -17,7 +18,7 @@ async def get_client(
             yield session
 
 
-URL = "http://localhost:8131/mcp/sse"
+URL = os.environ.get("MCP_SSE_URL", "http://localhost:8131/mcp/sse")
 
 
 async def test_list_tools() -> None:
