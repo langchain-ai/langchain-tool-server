@@ -387,10 +387,7 @@ class AsyncToolsClient:
             payload["input"] = args
         if call_id is not None:
             payload["call_id"] = call_id
-        request = {
-            "request": payload,
-            "$schema": "otc://1.0"
-        }
+        request = {"request": payload, "$schema": "otc://1.0"}
         return await self.http.post("/tools/call", json=request)
 
     async def as_langchain_tools(
@@ -483,7 +480,11 @@ class SyncToolsClient:
             payload["input"] = args
         if call_id is not None:
             payload["call_id"] = call_id
-        return self.http.post("/tools/call", json=payload)
+        request = {
+            "$schema": "otc://1.0",
+            "request": payload,
+        }
+        return self.http.post("/tools/call", json=request)
 
     def as_langchain_tools(
         self, *, tool_ids: Sequence[str] | None = None

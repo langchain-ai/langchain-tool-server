@@ -17,7 +17,7 @@ from jsonschema_rs import validator_for
 from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
 from langchain_core.tools import tool as tool_decorator
 from langchain_core.utils.function_calling import convert_to_openai_function
-from pydantic import TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 from typing_extensions import NotRequired, TypedDict
 
 
@@ -91,10 +91,15 @@ class CallToolRequest(TypedDict):
 
 
 # Not using `class` syntax b/c $schema is not a valid attribute name.
-CallToolFullRequest = TypedDict(
-    "CallToolFullRequest",
-    {"$schema": NotRequired[Literal["otc://1.0"]], "request": CallToolRequest},
-)
+class CallToolFullRequest(BaseModel):
+    """Full request to call a tool."""
+
+    schema: Literal["otc://1.0"] = Field(
+        default="otc://1.0",
+        description="Protocol version.",
+        alias="$schema",
+    )
+    request: CallToolRequest = Field(..., description="Request to call a tool.")
 
 
 class ToolError(TypedDict):
@@ -398,9 +403,7 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
         call_tool_request: CallToolFullRequest, request: Request
     ) -> CallToolResponse:
         """Call a tool by name with the provided payload."""
-        raise ValueError(call_tool_request)
-        call_tool_request = call_tool_request["request"]
-        return await tool_handler.call_tool(call_tool_request, request)
+        return await tool_handler.call_tool(call_tool_request.request, request)
 
     return router
 
