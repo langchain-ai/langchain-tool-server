@@ -6,9 +6,9 @@ from typing import Annotated, Generator, Optional
 import pytest
 from fastapi import FastAPI
 from httpx import HTTPStatusError
-from universal_tool_client import SyncClient
 from starlette.authentication import BaseUser
 from starlette.requests import Request
+from universal_tool_client import SyncClient
 
 from universal_tool_server import Server
 from universal_tool_server._version import __version__

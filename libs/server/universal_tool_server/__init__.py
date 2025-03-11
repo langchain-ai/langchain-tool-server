@@ -11,7 +11,11 @@ from universal_tool_server.auth.middleware import (
     ServerAuthenticationBackend,
     on_auth_error,
 )
-from universal_tool_server.tools import InjectedRequest, ToolHandler, create_tools_router
+from universal_tool_server.tools import (
+    InjectedRequest,
+    ToolHandler,
+    create_tools_router,
+)
 
 T = TypeVar("T", bound=Callable)
 

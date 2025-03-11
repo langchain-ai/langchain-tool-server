@@ -6,9 +6,9 @@ from typing import Annotated, AsyncGenerator, Optional, cast
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, HTTPStatusError
-from universal_tool_client import AsyncClient, get_async_client
 from starlette.authentication import BaseUser
 from starlette.requests import Request
+from universal_tool_client import AsyncClient, get_async_client
 
 from universal_tool_server import Server
 from universal_tool_server._version import __version__
