@@ -4,8 +4,16 @@ import asyncio
 import logging
 import sys
 from importlib import metadata
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+)
 
 import httpx
 import orjson
@@ -457,7 +465,13 @@ class SyncToolsClient:
         """List tools."""
         return self.http.get("/tools")
 
-    def call(self, tool_id: str, args: Dict[str, Any] | None = None, *, call_id: str | None = None) -> Any:
+    def call(
+        self,
+        tool_id: str,
+        args: Dict[str, Any] | None = None,
+        *,
+        call_id: str | None = None,
+    ) -> Any:
         """Call a tool."""
 
         payload = {"tool_id": tool_id}
