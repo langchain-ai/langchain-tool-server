@@ -161,7 +161,7 @@ dependencies = [
     { name = "langchain-anthropic" },
     { name = "langgraph" },
     { name = "langgraph-prebuilt" },
-    { name = "open-tool-client" },
+    { name = "universal-tool-client" },
     { name = "universal-tool-server" },
 ]
 
@@ -175,7 +175,7 @@ requires-dist = [
     { name = "langchain-anthropic", specifier = ">=0.3.9" },
     { name = "langgraph", specifier = ">=0.3.5" },
     { name = "langgraph-prebuilt", specifier = ">=0.1.2" },
-    { name = "open-tool-client", directory = "../libs/sdk-py" },
+    { name = "universal-tool-client", directory = "../libs/sdk-py" },
     { name = "universal-tool-server", directory = "../libs/server" },
 ]
 
@@ -483,71 +483,6 @@ wheels = [
 ]
 
 [[package]]
-name = "open-tool-client"
-version = "0.0.1"
-source = { directory = "../libs/sdk-py" }
-dependencies = [
-    { name = "httpx" },
-    { name = "langchain-core" },
-    { name = "orjson" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.22.1" },
-    { name = "langchain-core", specifier = ">=0.3.0" },
-    { name = "orjson", specifier = ">=3.10.1" },
-]
-
-[package.metadata.requires-dev]
-test = [
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-asyncio", specifier = ">=0.25.3" },
-    { name = "pytest-cov", specifier = ">=6.0.0" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-socket", specifier = ">=0.7.0" },
-    { name = "pytest-timeout", specifier = ">=2.3.1" },
-    { name = "ruff", specifier = ">=0.9.7" },
-]
-
-[[package]]
-name = "universal-tool-server"
-version = "0.1.0"
-source = { directory = "../libs/server" }
-dependencies = [
-    { name = "fastapi" },
-    { name = "jsonschema-rs" },
-    { name = "langchain-core" },
-    { name = "mcp" },
-    { name = "orjson" },
-    { name = "pydantic-core" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.110.0" },
-    { name = "jsonschema-rs", specifier = ">=0.20.1" },
-    { name = "langchain-core", specifier = ">=0.2.0" },
-    { name = "mcp", specifier = ">=1.3.0" },
-    { name = "orjson", specifier = ">=3.10.15" },
-    { name = "pydantic-core", specifier = ">=2.0.0" },
-]
-
-[package.metadata.requires-dev]
-test = [
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "open-tool-client", directory = "../libs/sdk-py" },
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-asyncio", specifier = ">=0.25.3" },
-    { name = "pytest-cov", specifier = ">=6.0.0" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-socket", specifier = ">=0.7.0" },
-    { name = "pytest-timeout", specifier = ">=2.3.1" },
-    { name = "ruff", specifier = ">=0.9.7" },
-    { name = "uvicorn", specifier = ">=0.34.0" },
-]
-
-[[package]]
 name = "orjson"
 version = "3.10.15"
 source = { registry = "https://pypi.org/simple" }
@@ -787,6 +722,15 @@ wheels = [
 ]
 
 [[package]]
+name = "structlog"
+version = "25.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/b8/d3670aec25747e32d54cd5258102ae0d69b9c61c79e7aa326be61a570d0d/structlog-25.2.0.tar.gz", hash = "sha256:d9f9776944207d1035b8b26072b9b140c63702fd7aa57c2f85d28ab701bd8e92", size = 1367438 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/eb/244741c1abf7b4092686db0798a4c43491298f40ddec4226f5c4f6b5d3eb/structlog-25.2.0-py3-none-any.whl", hash = "sha256:0fecea2e345d5d491b72f3db2e5fcd6393abfc8cd06a4851f21fcd4d1a99f437", size = 68448 },
+]
+
+[[package]]
 name = "tenacity"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -802,6 +746,73 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/df/db/f35a00659bc03fec321ba8bce9420de607a1d37f8342eee1863174c69557/typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8", size = 85321 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d", size = 37438 },
+]
+
+[[package]]
+name = "universal-tool-client"
+version = "0.0.2"
+source = { directory = "../libs/sdk-py" }
+dependencies = [
+    { name = "httpx" },
+    { name = "langchain-core" },
+    { name = "orjson" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.22.1" },
+    { name = "langchain-core", specifier = ">=0.3.0" },
+    { name = "orjson", specifier = ">=3.10.1" },
+]
+
+[package.metadata.requires-dev]
+test = [
+    { name = "pytest", specifier = ">=8.3.4" },
+    { name = "pytest-asyncio", specifier = ">=0.25.3" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-socket", specifier = ">=0.7.0" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
+    { name = "ruff", specifier = ">=0.9.7" },
+]
+
+[[package]]
+name = "universal-tool-server"
+version = "0.0.3"
+source = { directory = "../libs/server" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "jsonschema-rs" },
+    { name = "langchain-core" },
+    { name = "mcp" },
+    { name = "orjson" },
+    { name = "pydantic" },
+    { name = "structlog" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "jsonschema-rs", specifier = ">=0.20.1" },
+    { name = "langchain-core", specifier = ">=0.2.0" },
+    { name = "mcp", specifier = ">=1.3.0" },
+    { name = "orjson", specifier = ">=3.10.15" },
+    { name = "pydantic", specifier = ">=2.7.2" },
+    { name = "structlog", specifier = ">=20.1.0" },
+]
+
+[package.metadata.requires-dev]
+test = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytest", specifier = ">=8.3.4" },
+    { name = "pytest-asyncio", specifier = ">=0.25.3" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-socket", specifier = ">=0.7.0" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
+    { name = "ruff", specifier = ">=0.9.7" },
+    { name = "universal-tool-client", directory = "../libs/sdk-py" },
+    { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 
 [[package]]
