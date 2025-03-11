@@ -40,16 +40,17 @@ app.add_auth(auth)
 
 
 @auth.authenticate
-async def authenticate(headers: dict[bytes, bytes]) -> dict:
+async def authenticate(authorization: str) -> dict:
     """Authenticate incoming requests."""
-    api_key = headers.get(b"x-api-key")
+    api_key = authorization
 
     # Replace this with actual authentication logic.
     api_key_to_user = {
-        b"1": {"permissions": ["authenticated", "group1"], "identity": "some-user"},
-        b"2": {"permissions": ["authenticated", "group2"], "identity": "another-user"},
+        "1": {"permissions": ["authenticated", "group1"], "identity": "some-user"},
+        "2": {"permissions": ["authenticated", "group2"], "identity": "another-user"},
     }
-
+    # This is just an example. You should replace this with an actual
+    # implementation.
     if not api_key or api_key not in api_key_to_user:
         raise auth.exceptions.HTTPException(detail="Not authorized")
     return api_key_to_user[api_key]
@@ -301,7 +302,7 @@ from universal_tool_client import get_async_client
 async def get_tools():
     # Headers are entirely dependent on how you implement your authentication
     # (see Auth section)
-    client = get_async_client(url="http://localhost:8080/", headers={"x-api-key": "api key"})
+    client = get_async_client(url="http://localhost:8080/", headers={"authorization": "api key"})
     tools = await client.tools.list()
     # If you need langchain tools you can use the as_langchain_tools method
     langchain_tools = await client.tools.as_langchain_tools()
@@ -322,12 +323,12 @@ LangGraph Platform. It's a separate project, but the tutorial has useful informa
 
 The authentication function is a coroutine that can request any of the following parameters:
 
-| Parameter | Description                               |
-|-----------|-------------------------------------------|
-| `request` | The request object.                       |
-| `headers` | A dictionary of headers from the request. |
-| `body`    | The body of the request.                  |
-
+| Parameter       | Description                                                                                                                       |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `request`       | The HTTP request object that encapsulates all details of the incoming client request, including metadata and routing info.        |
+| `authorization` | A token or set of credentials used to authenticate the requestor and ensure secure access to the API or resource.                 |
+| `headers`       | A dictionary of HTTP headers providing essential metadata (e.g., content type, encoding, user-agent) associated with the request. |
+| `body`          | The payload of the request containing the data sent by the client, which may be formatted as JSON, XML, or form data.             |
 
 The function should either:
 
