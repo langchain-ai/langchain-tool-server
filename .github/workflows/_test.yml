@@ -43,7 +43,7 @@ jobs:
 
       - name: Run Integration tests
         # Only run this is the working-directory is server
-        if: ${{ inputs.working-directory == 'server' }}
+        if: ${{ inputs.working-directory == './libs/server' }}
         shell: bash
         run: |
           make test-integration
