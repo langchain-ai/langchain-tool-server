@@ -63,6 +63,26 @@ async def test_list_tools() -> None:
         assert json_data == []
 
 
+async def test_422() -> None:
+    """Test 422 responses."""
+    app = Server()
+
+    @app.add_tool()
+    def echo(number: int) -> str:
+        """Echo a message."""
+        return str(number)
+
+    async with get_async_test_client(app) as client:
+        response = await client.post("/tools/call", json={})
+        assert response.status_code == 422
+        assert "message" in response.json()
+        assert (
+            response.json()["message"]
+            == "{'type': 'missing', 'loc': ('body', 'request'), 'msg': 'Field "
+            "required', 'input': {}}"
+        )
+
+
 async def test_lifespan() -> None:
     import contextlib
 

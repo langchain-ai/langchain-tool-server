@@ -484,7 +484,9 @@ async def validation_exception_handler(
     This will match the shape of the error response to the one implemented by
     the tool calling spec.
     """
-    msg = f"{exc.body} with {exc.errors()}"
+    msg = ", ".join(str(e) for e in exc.errors())
+    if exc.body:
+        msg = f"{exc.body}: {msg}"
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder({"message": msg}),
