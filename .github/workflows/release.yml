@@ -17,6 +17,7 @@ on:
         options:
           - "libs/server"
           - "libs/sdk-py"
+          - "libs/o2mcp"
       dangerous-nonmain-release:
         required: false
         type: boolean
