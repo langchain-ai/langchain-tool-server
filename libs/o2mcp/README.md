@@ -1,8 +1,5 @@
 ## Installation
 
 ```bash
-pip install universal-tool-server open-tool-client
+pip install o2mcp 
 ```
-
-## Example Usage
-
