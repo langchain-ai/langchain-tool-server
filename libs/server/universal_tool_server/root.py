@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from typing_extensions import TypedDict
 
 from universal_tool_server._version import __version__
+from .splash import SPLASH
 
 
 class InfoResponse(TypedDict):
@@ -16,22 +17,30 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 async def index() -> str:
+    SPLASH_HTML = SPLASH.replace("\n", "<br>")
     html_content = f"""
     <html>
         <head>
             <title>Universal Tool Server</title>
         </head>
         <body>
-            <h1>Universal Tool Server</h1>
+        <div>
+        <p style="white-space: pre-wrap; font-family: monospace;">
+            {SPLASH_HTML}
+        </p>
+        </div>
+        <div>
             <p>
                 <ul>
                     <li><strong>Version</strong>: {__version__}</li>
                     <li><a href="docs">Docs</strong></li>
                 </ul>
             </p>
+        </div>
         </body>
     </html>
     """
+
     return html_content
 
 

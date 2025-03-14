@@ -32,6 +32,7 @@ class Server:
         self.app = FastAPI(
             version=__version__,
             lifespan=lifespan,
+            title="Universal Tool Server",
         )
 
         # Add a global exception handler for validation errors

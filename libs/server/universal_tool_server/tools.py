@@ -96,7 +96,7 @@ class CallToolRequest(TypedDict):
 class CallToolFullRequest(BaseModel):
     """Full request to call a tool."""
 
-    schema: Literal["otc://1.0"] = Field(
+    protocol_schema: Literal["otc://1.0"] = Field(
         default="otc://1.0",
         description="Protocol version.",
         alias="$schema",
