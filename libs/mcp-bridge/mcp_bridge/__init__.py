@@ -118,7 +118,11 @@ async def create_mcp_server(
     ]
 
     if tools:
-        available_tools = [tool for tool in available_tools if tool["name"] in tools]
+        available_tools = [
+            available_tool
+            for available_tool in available_tools
+            if available_tool.name in tools
+        ]
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -158,6 +162,67 @@ async def run_server_stdio(server: MCPServer) -> None:
         )
 
 
+async def display_tools_table(*, url: str, headers: dict | None) -> None:
+    """Connect to server and display available tools in a tabular format."""
+    client = get_async_client(url=url, headers=headers)
+    print(f"\nConnecting to server at {url}...\n")
+
+    try:
+        server_tools = await client.tools.list()
+
+        if not server_tools:
+            print("No tools available.")
+            return
+
+        # Find the longest tool name for formatting
+        max_name_length = max(len(tool["name"]) for tool in server_tools)
+
+        # Print table header
+        print(f"{'NAME':<{max_name_length + 2}}| DESCRIPTION")
+        print(f"{'-' * (max_name_length + 2)}|{'-' * 70}")
+
+        # Group tools by name and get the latest version of each
+        latest_tools = {}
+
+        for tool in server_tools:
+            name = tool["name"]
+            version = tool["version"]
+            version_tuple = tuple(map(int, version.split(".")))
+
+            if name not in latest_tools or version_tuple > latest_tools[name][0]:
+                latest_tools[name] = (version_tuple, tool)
+
+        # Sort tools by name
+        for name in sorted(latest_tools.keys()):
+            tool = latest_tools[name][1]
+
+            description = tool["description"].strip()
+            if not description:
+                print(f"{tool['name']:<{max_name_length + 2}}| [No description]")
+                print()
+                continue
+
+            # Split description by newlines to preserve original line breaks
+            desc_lines = description.split("\n")
+            first_line = True
+
+            for line in desc_lines:
+                if first_line:
+                    # Print first line with the tool name
+                    print(f"{tool['name']:<{max_name_length + 2}}| {line}")
+                    first_line = False
+                else:
+                    # Print remaining lines with proper indentation relative to the column
+                    print(f"{' ' * (max_name_length + 2)}| {line}")
+
+            # Add a small gap between tools
+            print()
+
+    except Exception as e:
+        print_error(f"Failed to list tools: {str(e)}")
+        sys.exit(1)
+
+
 async def run(
     *, url: str, headers: dict | None, tools: list[str] | None = None
 ) -> None:
@@ -186,6 +251,9 @@ Examples:
 
   # Connect and limit to specific tools
   mcp-bridge --url http://localhost:8000 --tools tool1 tool2 tool3
+
+  # List available tools without starting the server
+  mcp-bridge --url http://localhost:8000 --list-tools
 
   # Display version information
   mcp-bridge --version
@@ -224,6 +292,9 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--list-tools", action="store_true", help="List available tools and exit"
+    )
+    parser.add_argument(
         "--version", action="store_true", help="Show version information and exit"
     )
     # Show help and version if no arguments provided
@@ -256,7 +327,10 @@ def main() -> None:
             print_error("--headers must be valid JSON")
             sys.exit(1)
 
-    asyncio.run(run(url=args.url, headers=headers, tools=args.tools))
+    if args.list_tools:
+        asyncio.run(display_tools_table(url=args.url, headers=headers))
+    else:
+        asyncio.run(run(url=args.url, headers=headers, tools=args.tools))
 
 
 if __name__ == "__main__":
