@@ -393,7 +393,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mcp-bridge"
+name = "o2mcp"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

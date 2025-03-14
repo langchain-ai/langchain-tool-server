@@ -1,5 +1,5 @@
 [project]
-name = "mcp-bridge"
+name = "o2mcp"
 version = "0.0.1"
 description = "MCP Bridge"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-bridge = "mcp_bridge:main"
+o2mcp = "o2mcp:main"
 
 [dependency-groups]
 test = [
