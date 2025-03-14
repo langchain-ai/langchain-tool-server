@@ -11,6 +11,9 @@ dependencies = [
     "universal-tool-client>=0.0.2",
 ]
 
+[project.scripts]
+mcp-bridge = "mcp_bridge:main"
+
 [dependency-groups]
 test = [
     "pytest>=8.3.4",
