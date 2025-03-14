@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 from importlib import metadata
@@ -16,7 +17,6 @@ from mcp.server.lowlevel import Server as MCPServer
 from mcp.server.sse import SseServerTransport
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 from universal_tool_client import AsyncClient, get_async_client
-import logging
 
 logger = logging.getLogger(__name__)
 
