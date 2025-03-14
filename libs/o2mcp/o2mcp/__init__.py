@@ -9,12 +9,16 @@ import os
 import sys
 from importlib import metadata
 from itertools import chain
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 from mcp import stdio_server
 from mcp.server.lowlevel import Server as MCPServer
+from mcp.server.sse import SseServerTransport
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 from universal_tool_client import AsyncClient, get_async_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     __version__ = metadata.version(__package__)
@@ -39,12 +43,12 @@ def print_error(message: str) -> None:
 
 
 SPLASH = """\
-██████╗ ██████╗ ███╗   ███╗ ██████╗██████╗ 
-██╔═══██╗╚════██╗████╗ ████║██╔════╝██╔══██╗
-██║   ██║ █████╔╝██╔████╔██║██║     ██████╔╝
-██║   ██║██╔═══╝ ██║╚██╔╝██║██║     ██╔═══╝ 
-╚██████╔╝███████╗██║ ╚═╝ ██║╚██████╗██║     
- ╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝╚═╝  
+   ██████╗ ██████╗ ███╗   ███╗ ██████╗██████╗
+   ██╔═══██╗╚════██╗████╗ ████║██╔════╝██╔══██╗
+   ██║   ██║ █████╔╝██╔████╔██║██║     ██████╔╝
+   ██║   ██║██╔═══╝ ██║╚██╔╝██║██║     ██╔═══╝
+   ╚██████╔╝███████╗██║ ╚═╝ ██║╚██████╗██║
+    ╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝╚═╝
 """
 
 
@@ -162,6 +166,35 @@ async def run_server_stdio(server: MCPServer) -> None:
         )
 
 
+async def run_starlette(server: MCPServer, *, host: str, port: int) -> None:
+    """Run as a Starlette server exposing /sse endpoint."""
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.routing import Mount, Route
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request: Request):
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await server.run(
+                streams[0], streams[1], server.create_initialization_options()
+            )
+
+    starlette_app = Starlette(
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages/", app=sse.handle_post_message),
+        ],
+    )
+
+    config = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+
 async def display_tools_table(*, url: str, headers: dict | None) -> None:
     """Connect to server and display available tools in a tabular format."""
     client = get_async_client(url=url, headers=headers)
@@ -224,7 +257,12 @@ async def display_tools_table(*, url: str, headers: dict | None) -> None:
 
 
 async def run(
-    *, url: str, headers: dict | None, tools: list[str] | None = None
+    *,
+    url: str,
+    headers: dict | None,
+    tools: list[str] | None = None,
+    mode: str = Literal["stdio", "sse"],
+    sse_settings: dict | None = None,
 ) -> None:
     """Run the MCP server in stdio mode."""
     client = get_async_client(url=url, headers=headers)
@@ -232,11 +270,20 @@ async def run(
     print()
     print(SPLASH)
     print()
-    print()
     server = await create_mcp_server(client, tools=tools)
-    print(f"* Connected to universal tool server at {url}")
-    print("* Running MCP server in stdio mode. Press CTRL+C to exit.")
-    await run_server_stdio(server)
+    print()
+    print(f"Connected to universal tool server at {url}")
+
+    if mode == "sse":
+        sse_settings = sse_settings or {}
+        port = sse_settings.get("port", 8000)
+        host = sse_settings.get("host", "localhost")
+        print("Running MCP server in SSE mode at http://{host}:{port}/sse")
+        print()
+        await run_starlette(server, host=host, port=port)
+    else:
+        print("* Running MCP server in stdio mode. Press CTRL+C to exit.")
+        await run_server_stdio(server)
 
 
 def get_usage_examples() -> str:
@@ -254,6 +301,12 @@ Examples:
 
   # List available tools without starting the server
   o2mcp --url http://localhost:8000 --list-tools
+
+  # Start the server in SSE mode
+  o2mcp --url http://localhost:8000 --mode sse
+
+  # Start the server in SSE mode with custom host and port
+  o2mcp --url http://localhost:8000 --mode sse --host 0.0.0.0 --port 9000
 
   # Display version information
   o2mcp --version
@@ -297,6 +350,25 @@ def main() -> None:
     parser.add_argument(
         "--version", action="store_true", help="Show version information and exit"
     )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="Server mode: stdio (default) or sse",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="localhost",
+        help="Host to bind the SSE server to (only used with --mode sse)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind the SSE server to (only used with --mode sse)",
+    )
     # Show help and version if no arguments provided
     if len(sys.argv) == 1:
         print(f"MCP Bridge v{__version__}")
@@ -330,7 +402,27 @@ def main() -> None:
     if args.list_tools:
         asyncio.run(display_tools_table(url=args.url, headers=headers))
     else:
-        asyncio.run(run(url=args.url, headers=headers, tools=args.tools))
+        sse_settings = None
+
+        # Check if host or port are specified in stdio mode
+        if args.mode == "stdio" and (args.host != "localhost" or args.port != 8000):
+            print_error("--host and --port can only be used with --mode sse")
+            sys.exit(1)
+
+        if args.mode == "sse":
+            sse_settings = {
+                "host": args.host,
+                "port": args.port,
+            }
+        asyncio.run(
+            run(
+                url=args.url,
+                headers=headers,
+                tools=args.tools,
+                mode=args.mode,
+                sse_settings=sse_settings,
+            )
+        )
 
 
 if __name__ == "__main__":

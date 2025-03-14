@@ -401,6 +401,7 @@ dependencies = [
     { name = "mcp" },
     { name = "orjson" },
     { name = "universal-tool-client" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -420,6 +421,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.4.1" },
     { name = "orjson", specifier = ">=3.10.1" },
     { name = "universal-tool-client", specifier = ">=0.0.2" },
+    { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 
 [package.metadata.requires-dev]
