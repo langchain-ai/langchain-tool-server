@@ -187,9 +187,15 @@ async def run_starlette(server: MCPServer, *, host: str, port: int) -> None:
         ],
     )
 
-    config = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
+    config = uvicorn.Config(
+        starlette_app,
+        host=host,
+        port=port,
+        log_level="info",
+        timeout_graceful_shutdown=1,
+    )
+    uvicorn_server = uvicorn.Server(config)
+    await uvicorn_server.serve()
 
 
 async def display_tools_table(*, url: str, headers: dict | None) -> None:
@@ -269,13 +275,13 @@ async def run(
     print()
     server = await create_mcp_server(client, tools=tools)
     print()
-    print(f"Connected to universal tool server at {url}")
+    print(f"Connected to {url}")
 
     if mode == "sse":
         sse_settings = sse_settings or {}
         port = sse_settings.get("port", 8000)
         host = sse_settings.get("host", "localhost")
-        print("Running MCP server in SSE mode at http://{host}:{port}/sse")
+        print(f"Running MCP server with SSE endpoint at http://{host}:{port}/sse")
         print()
         await run_starlette(server, host=host, port=port)
     else:
