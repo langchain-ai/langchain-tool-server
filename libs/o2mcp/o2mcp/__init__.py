@@ -39,12 +39,12 @@ def print_error(message: str) -> None:
 
 
 SPLASH = """\
-███╗   ███╗ ██████╗██████╗     ██████╗ ██████╗ ██╗██████╗  ██████╗ ███████╗
-████╗ ████║██╔════╝██╔══██╗    ██╔══██╗██╔══██╗██║██╔══██╗██╔════╝ ██╔════╝
-██╔████╔██║██║     ██████╔╝    ██████╔╝██████╔╝██║██║  ██║██║  ███╗█████╗
-██║╚██╔╝██║██║     ██╔═══╝     ██╔══██╗██╔══██╗██║██║  ██║██║   ██║██╔══╝
-██║ ╚═╝ ██║╚██████╗██║         ██████╔╝██║  ██║██║██████╔╝╚██████╔╝███████╗
-╚═╝     ╚═╝ ╚═════╝╚═╝         ╚═════╝ ╚═╝  ╚═╝╚═╝╚═════╝  ╚═════╝ ╚══════╝
+██████╗ ██████╗ ███╗   ███╗ ██████╗██████╗ 
+██╔═══██╗╚════██╗████╗ ████║██╔════╝██╔══██╗
+██║   ██║ █████╔╝██╔████╔██║██║     ██████╔╝
+██║   ██║██╔═══╝ ██║╚██╔╝██║██║     ██╔═══╝ 
+╚██████╔╝███████╗██║ ╚═╝ ██║╚██████╗██║     
+ ╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝╚═╝  
 """
 
 
@@ -244,19 +244,19 @@ def get_usage_examples() -> str:
     examples = """
 Examples:
   # Connect to a Universal Tool Server with default settings
-  mcp-bridge --url http://localhost:8000
+  o2mcp --url http://localhost:8000
 
   # Connect with authentication headers
-  mcp-bridge --url http://localhost:8000 --headers '{"Authorization": "Bearer YOUR_TOKEN"}'
+  o2mcp --url http://localhost:8000 --headers '{"Authorization": "Bearer YOUR_TOKEN"}'
 
   # Connect and limit to specific tools
-  mcp-bridge --url http://localhost:8000 --tools tool1 tool2 tool3
+  o2mcp --url http://localhost:8000 --tools tool1 tool2 tool3
 
   # List available tools without starting the server
-  mcp-bridge --url http://localhost:8000 --list-tools
+  o2mcp --url http://localhost:8000 --list-tools
 
   # Display version information
-  mcp-bridge --version
+  o2mcp --version
 """
     return examples
 
