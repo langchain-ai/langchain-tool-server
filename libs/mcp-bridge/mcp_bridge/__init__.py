@@ -11,6 +11,17 @@ from importlib import metadata
 from itertools import chain
 from typing import Any, Sequence
 
+from mcp import stdio_server
+from mcp.server.lowlevel import Server as MCPServer
+from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
+from universal_tool_client import AsyncClient, get_async_client
+
+try:
+    __version__ = metadata.version(__package__)
+except metadata.PackageNotFoundError:
+    # Case where package metadata is not available.
+    __version__ = ""
+
 
 # ANSI color codes
 class Colors:
@@ -26,17 +37,6 @@ def print_error(message: str) -> None:
     else:
         print(f"Error: {message}")
 
-
-from mcp import stdio_server
-from mcp.server.lowlevel import Server as MCPServer
-from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
-from universal_tool_client import AsyncClient, get_async_client
-
-try:
-    __version__ = metadata.version(__package__)
-except metadata.PackageNotFoundError:
-    # Case where package metadata is not available.
-    __version__ = ""
 
 SPLASH = """\
 ███╗   ███╗ ██████╗██████╗     ██████╗ ██████╗ ██╗██████╗  ██████╗ ███████╗
