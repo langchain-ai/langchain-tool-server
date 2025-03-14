@@ -26,6 +26,7 @@ def print_error(message: str) -> None:
     else:
         print(f"Error: {message}")
 
+
 from mcp import stdio_server
 from mcp.server.lowlevel import Server as MCPServer
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
@@ -197,7 +198,8 @@ def show_usage_examples() -> None:
     print(get_usage_examples())
 
 
-def main():
+def main() -> None:
+    """Main entry point for the MCP Bridge."""
     parser = argparse.ArgumentParser(
         description="MCP Bridge Server",
         epilog=get_usage_examples(),
