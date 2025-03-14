@@ -18,8 +18,6 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 from universal_tool_client import AsyncClient, get_async_client
 
-logger = logging.getLogger(__name__)
-
 try:
     __version__ = metadata.version(__package__)
 except metadata.PackageNotFoundError:
