@@ -2,14 +2,40 @@
 
 from __future__ import annotations
 
+import argparse
+import asyncio
 import json
+import os
+import sys
+from importlib import metadata
 from itertools import chain
 from typing import Any, Sequence
+
+
+# ANSI color codes
+class Colors:
+    RED = "\033[91m"
+    END = "\033[0m"
+
+
+def print_error(message: str) -> None:
+    """Print an error message in red if terminal supports colors."""
+    # Check if stdout is a terminal and if the terminal supports colors
+    if sys.stdout.isatty() and os.environ.get("TERM") != "dumb":
+        print(f"{Colors.RED}Error: {message}{Colors.END}")
+    else:
+        print(f"Error: {message}")
 
 from mcp import stdio_server
 from mcp.server.lowlevel import Server as MCPServer
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 from universal_tool_client import AsyncClient, get_async_client
+
+try:
+    __version__ = metadata.version(__package__)
+except metadata.PackageNotFoundError:
+    # Case where package metadata is not available.
+    __version__ = ""
 
 SPLASH = """\
 ███╗   ███╗ ██████╗██████╗     ██████╗ ██████╗ ██╗██████╗  ██████╗ ███████╗
@@ -123,7 +149,6 @@ async def create_mcp_server(
 
 async def run_server_stdio(server: MCPServer) -> None:
     """Run the MCP server."""
-    print(SPLASH)
     async with stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
@@ -132,16 +157,105 @@ async def run_server_stdio(server: MCPServer) -> None:
         )
 
 
-async def main(
+async def run(
     *, url: str, headers: dict | None, tools: list[str] | None = None
 ) -> None:
     """Run the MCP server in stdio mode."""
     client = get_async_client(url=url, headers=headers)
+    print()
+    print()
+    print(SPLASH)
+    print()
+    print()
     server = await create_mcp_server(client, tools=tools)
+    print(f"* Connected to universal tool server at {url}")
+    print("* Running MCP server in stdio mode. Press CTRL+C to exit.")
     await run_server_stdio(server)
 
 
-if __name__ == "__main__":
-    import asyncio
+def get_usage_examples() -> str:
+    """Return usage examples for the command line interface."""
+    examples = """
+Examples:
+  # Connect to a Universal Tool Server with default settings
+  mcp-bridge --url http://localhost:8000
 
-    asyncio.run(main())
+  # Connect with authentication headers
+  mcp-bridge --url http://localhost:8000 --headers '{"Authorization": "Bearer YOUR_TOKEN"}'
+
+  # Connect and limit to specific tools
+  mcp-bridge --url http://localhost:8000 --tools tool1 tool2 tool3
+
+  # Display version information
+  mcp-bridge --version
+"""
+    return examples
+
+
+def show_usage_examples() -> None:
+    """Print usage examples for the command line interface."""
+    print(get_usage_examples())
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="MCP Bridge Server",
+        epilog=get_usage_examples(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--url", type=str, help="URL of the Universal Tool Server (required)"
+    )
+    parser.add_argument(
+        "--headers",
+        type=str,
+        default=None,
+        help="JSON encoded headers to include in requests",
+    )
+    parser.add_argument(
+        "--tools",
+        type=str,
+        nargs="*",
+        help=(
+            "List of tools to expose. If not specified, all available tools will be "
+            "used"
+        ),
+    )
+    parser.add_argument(
+        "--version", action="store_true", help="Show version information and exit"
+    )
+    # Show help and version if no arguments provided
+    if len(sys.argv) == 1:
+        print(f"MCP Bridge v{__version__}")
+        parser.print_help()
+        sys.exit(0)
+
+    args = parser.parse_args()
+
+    # Handle version request
+    if args.version:
+        print(f"MCP Bridge v{__version__}")
+        sys.exit(0)
+
+    # Check for required URL
+    if not args.url:
+        parser.print_help()
+        print("\n")  # Add extra space before error
+        print_error("the --url argument is required")
+        sys.exit(1)
+
+    headers = None
+    if args.headers:
+        try:
+            headers = json.loads(args.headers)
+        except json.JSONDecodeError:
+            parser.print_help()
+            print("\n")  # Add extra space before error
+            print_error("--headers must be valid JSON")
+            sys.exit(1)
+
+    asyncio.run(run(url=args.url, headers=headers, tools=args.tools))
+
+
+if __name__ == "__main__":
+    main()
