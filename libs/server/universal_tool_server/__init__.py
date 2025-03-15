@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import Callable, Optional, Tuple, TypeVar, Union, overload
 
 from fastapi import FastAPI
@@ -12,6 +13,7 @@ from universal_tool_server.auth.middleware import (
     ServerAuthenticationBackend,
     on_auth_error,
 )
+from universal_tool_server.splash import SPLASH
 from universal_tool_server.tools import (
     InjectedRequest,
     ToolHandler,
@@ -29,9 +31,21 @@ class Server:
         self, *, lifespan: Lifespan | None = None, enable_mcp: bool = False
     ) -> None:
         """Initialize the server."""
+
+        @asynccontextmanager
+        async def full_lifespan(app: FastAPI):
+            """A lifespan event that is called when the server starts."""
+            print(SPLASH)
+            # yield whatever is inside the context manager
+            if lifespan:
+                async with lifespan(app) as stateful:
+                    yield stateful
+            else:
+                yield
+
         self.app = FastAPI(
             version=__version__,
-            lifespan=lifespan,
+            lifespan=full_lifespan,
             title="Universal Tool Server",
         )
 
