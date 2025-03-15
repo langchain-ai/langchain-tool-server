@@ -96,8 +96,11 @@ class CallToolRequest(TypedDict):
 class CallToolFullRequest(BaseModel):
     """Full request to call a tool."""
 
-    protocol_schema: Literal["otc://1.0"] = Field(
-        default="otc://1.0",
+    # The protocol schema will temporarily allow otc://1.0 for backwards compatibility.
+    # This is expected to be removed in the near future as it is not part of the
+    # official spec.
+    protocol_schema: Union[Literal["urn:oxp:1.0"], str] = Field(
+        default="urn:oxp:1.0",
         description="Protocol version.",
         alias="$schema",
     )
@@ -418,6 +421,11 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
         call_tool_request: CallToolFullRequest, request: Request
     ) -> CallToolResponse:
         """Call a tool by name with the provided payload."""
+        if call_tool_request.protocol_schema not in {"urn:oxp:1.0", "otc://1.0"}:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid protocol schema. Expected 'urn:oxp:1.0'.",
+            )
         return await tool_handler.call_tool(call_tool_request.request, request)
 
     return router
