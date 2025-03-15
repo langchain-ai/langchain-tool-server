@@ -30,6 +30,7 @@ except metadata.PackageNotFoundError:
 
 logger = logging.getLogger(__name__)
 
+PROTOCOL = "urn:oxp:1.0"
 
 def _get_headers(custom_headers: Optional[dict[str, str]]) -> dict[str, str]:
     """Combine api_key and custom user-provided headers."""
@@ -387,7 +388,7 @@ class AsyncToolsClient:
             payload["input"] = args
         if call_id is not None:
             payload["call_id"] = call_id
-        request = {"request": payload, "$schema": "otc://1.0"}
+        request = {"request": payload, "$schema": PROTOCOL}
         return await self.http.post("/tools/call", json=request)
 
     async def as_langchain_tools(
@@ -481,7 +482,7 @@ class SyncToolsClient:
         if call_id is not None:
             payload["call_id"] = call_id
         request = {
-            "$schema": "otc://1.0",
+            "$schema": PROTOCOL,
             "request": payload,
         }
         return self.http.post("/tools/call", json=request)
