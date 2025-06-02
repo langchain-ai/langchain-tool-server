@@ -1,3 +1,23 @@
+> We recommend that users use FastMCP and langchain-mcp-adapters to expose langchain tools via MCP using Streamable HTTP as the transport.
+> universal-tool-server was created before Streamable HTTP transport was introduced into the MCP specification as a stopgap solution.
+
+```python
+from langchain_core.tools import tool
+from langchain_mcp_adapters.tools import to_fastmcp
+from mcp.server.fastmcp import FastMCP
+
+
+@tool
+def add(a: int, b: int) -> int:
+    """Add two numbers"""
+    return a + b
+
+
+fastmcp_tool = to_fastmcp(add)
+
+mcp = FastMCP("Math", tools=[fastmcp_tool])
+```
+
 # Universal Tool Server
 
 A dedicated tool server decouples the creation of specialized tools (e.g., for retrieving data from specific knowledge sources) from agent development. This separation enables different teams to contribute and manage tools independently. Agents can then be rapidly configured—by simply specifying a prompt and a set of accessible tools. This streamlined approach simplifies authentication and authorization and accelerates the deployment of agents into production.
