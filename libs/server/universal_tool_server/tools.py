@@ -57,6 +57,8 @@ class RegisteredTool(TypedDict):
 
     A version of 1 will be represented as (1, 0, 0).
     """
+    metadata: NotRequired[Dict[str, Any]]
+    """Optional metadata associated with the tool."""
 
 
 def _is_allowed(
@@ -218,6 +220,24 @@ class ToolHandler:
         # Mapping from tool name to the latest version of the tool.
         self.latest_version: Dict[str, RegisteredTool] = {}
 
+    def _auth_hook(self, tool: RegisteredTool, tool_id: str) -> None:
+        """Auth hook that runs before tool execution.
+        
+        For now, just prints out auth metadata if present.
+        
+        Args:
+            tool: The registered tool being executed.
+            tool_id: The ID of the tool being called.
+        """
+        metadata = tool.get("metadata")
+        if metadata and "auth" in metadata:
+            auth = metadata["auth"]
+            provider = auth.get("provider")
+            scopes = auth.get("scopes", [])
+            print(f"Auth required for tool {tool_id} - Provider: {provider}, Scopes: {scopes}")
+        else:
+            print(f"No auth metadata for tool {tool_id}")
+
     def add(
         self,
         tool: Union[BaseTool, Callable],
@@ -269,6 +289,7 @@ class ToolHandler:
                 "accepts": accepts,
                 # Register everything as version 1.0.0 for now.
                 "version": version,
+                "metadata": tool.metadata,
             }
         else:
             raise AssertionError("Reached unreachable code")
@@ -366,6 +387,8 @@ class ToolHandler:
                 )
             # Update the injected arguments post-validation
             args.update(injected_arguments)
+            self._auth_hook(tool, tool_id)
+            
             tool_output = await fn(args)
         else:
             # This is an internal error
