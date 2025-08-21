@@ -6,6 +6,7 @@ from typing import Annotated, Generator, Optional
 import pytest
 from fastapi import FastAPI
 from httpx import HTTPStatusError
+from langchain_core.tools import tool
 from langchain_tool_client import SyncClient
 from starlette.authentication import BaseUser
 from starlette.requests import Request
@@ -68,20 +69,22 @@ def test_add_langchain_tool() -> None:
         tools = client.tools.list()
         assert tools == []
 
-    @app.add_tool
+    @tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     def echo(msg: str) -> str:
         """Echo the message back."""
         return msg
 
-    @app.add_tool
+    @tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, echo, add)
 
     with get_sync_test_client(app) as client:
         data = client.tools.list()
@@ -125,15 +128,17 @@ def test_call_tool() -> None:
     """Test call parameterless tool."""
     app = Server()
 
-    @app.add_tool
+    @tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, echo, add)
 
     with get_sync_test_client(app) as client:
         response = client.tools.call(
@@ -152,15 +157,17 @@ def test_create_langchain_tools_from_server() -> None:
     """Test create langchain tools from server."""
     app = Server()
 
-    @app.add_tool
+    @tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, echo, add)
 
     with get_sync_test_client(app) as client:
         tools = client.tools.as_langchain_tools(tool_ids=["say_hello", "add"])
