@@ -66,9 +66,10 @@ class Server:
         self._enable_mcp = enable_mcp
 
         if enable_mcp:
-            from universal_tool_server.mcp import MCP_APP_PREFIX, create_mcp_app
+            from universal_tool_server.mcp import create_mcp_router
 
-            self.app.mount(MCP_APP_PREFIX, create_mcp_app(self.tool_handler))
+            mcp_router = create_mcp_router(self.tool_handler)
+            self.app.include_router(mcp_router, prefix="/mcp")
 
     @overload
     def add_tool(
@@ -121,13 +122,34 @@ class Server:
         """
 
         def decorator(fn: T) -> T:
+            # Register the tool
             self.tool_handler.add(fn, permissions=permissions, version=version)
+
+            # Log the registration with details
+            tool_name = getattr(fn, "name", getattr(fn, "__name__", "unknown"))
+            tool_description = getattr(fn, "description", "No description")
+            version_str = (
+                ".".join(map(str, version))
+                if isinstance(version, tuple)
+                else str(version)
+            )
+            permissions_str = ", ".join(permissions) if permissions else "none"
+
+            print(
+                f"Registered tool: {tool_name} | {tool_description} | v{version_str} | permissions: {permissions_str}"
+            )
+
             # Return the original. The decorator is only to register the tool.
             return fn
 
         if fn is not None:
             return decorator(fn)
         return decorator
+
+    def add_tools(self, *tools) -> None:
+        """Add multiple tools at once."""
+        for tool in tools:
+            self.add_tool(tool)
 
     def add_auth(self, auth: Auth) -> None:
         """Add an authentication handler to the server."""
@@ -158,4 +180,4 @@ class Server:
         return await self.app.__call__(scope, receive, send)
 
 
-__all__ = ["__version__", "Server", "Auth", "InjectedRequest"]
+__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "prebuilts"]

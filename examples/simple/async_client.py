@@ -12,21 +12,15 @@ async def main():
 
     url = sys.argv[1]
     client = get_async_client(url=url)
-    # Check server status
-    print(await client.ok())  # "OK"
-    print(await client.info())  # Server version and other information
-
-    # List tools
-    print(await client.tools.list())  # List of tools
-    # Call a tool
-    print(await client.tools.call("add", {"x": 1, "y": 2}))  # 3
-
-    # Get as langchain tools
-    select_tools = ["echo", "add"]
-    tools = await client.tools.as_langchain_tools(select_tools)
-    # Async
-    print(await tools[0].ainvoke({"msg": "Hello"}))  # "Hello!"
-    print(await tools[1].ainvoke({"x": 1, "y": 3}))  # 4
+    
+    # Call the send_email tool with auth metadata
+    print("Calling send_email tool...")
+    result = await client.tools.call("send_email", {
+        "to": "test@example.com",
+        "subject": "Test Email", 
+        "body": "This is a test email"
+    })
+    print(f"Result: {result}")
 
 
 if __name__ == "__main__":

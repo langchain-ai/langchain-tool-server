@@ -5,9 +5,11 @@ description = "Env for running examples."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "langchain-core",
     "langchain-anthropic>=0.3.9",
     "langgraph>=0.3.5",
     "langgraph-prebuilt>=0.1.2",
+    "mcp>=1.13.0",
     "universal-tool-client",
     "universal-tool-server",
 ]
@@ -21,3 +23,4 @@ test = [
 [tool.uv.sources]
 universal-tool-server = { path = "../libs/server" }
 universal-tool-client = { path = "../libs/sdk-py" }
+langchain-core = { path = "../../langchain/libs/core", editable = true }
