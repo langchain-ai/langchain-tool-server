@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 from typing_extensions import TypedDict
 
-from universal_tool_server._version import __version__
+from langchain_tool_server._version import __version__
 
 from .splash import SPLASH
 

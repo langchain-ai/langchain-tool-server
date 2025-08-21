@@ -31,8 +31,8 @@ Add a server.py file to your project and define your tools with type hints.
 from typing import Annotated
 from starlette.requests import Request
 
-from universal_tool_server.tools import InjectedRequest
-from universal_tool_server import Server, Auth
+from langchain_tool_server.tools import InjectedRequest
+from langchain_tool_server import Server, Auth
 
 app = Server()
 auth = Auth()
@@ -212,7 +212,7 @@ You can enable support for the MCP SSE protocol by passing `enable_mcp=True` to 
 > Auth is not supported when using MCP SSE. So if you try to use auth and enable MCP, the server will raise an exception by design.
 
 ```python
-from universal_tool_server import Server
+from langchain_tool_server import Server
 
 app = Server(enable_mcp=True)
 
@@ -277,7 +277,7 @@ A tool can request access to Starlette's `Request` object by using the `Injected
 
 ```python
 from typing import Annotated
-from universal_tool_server import InjectedRequest
+from langchain_tool_server import InjectedRequest
 from starlette.requests import Request
 
 
@@ -336,7 +336,7 @@ The function should either:
 2. Raise an `auth.exceptions.HTTPException` if the request cannot be authenticated.
 
 ```python
-from universal_tool_server import Auth
+from langchain_tool_server import Auth
 
 auth = Auth()
 

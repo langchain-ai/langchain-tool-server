@@ -2,8 +2,8 @@ from typing import Annotated
 
 from starlette.requests import Request
 
-from universal_tool_server import Server
-from universal_tool_server.tools import InjectedRequest
+from langchain_tool_server import Server
+from langchain_tool_server.tools import InjectedRequest
 
 app = Server(enable_mcp=True)
 

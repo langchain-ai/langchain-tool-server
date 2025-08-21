@@ -1,4 +1,4 @@
-from universal_tool_server import Server
+from langchain_tool_server import Server
 from langchain_core.tools import tool
 
 from tools.math_tools import TOOLS as math_tools

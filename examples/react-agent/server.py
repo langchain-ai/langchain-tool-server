@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from universal_tool_server import Server
+from langchain_tool_server import Server
 
 app = Server()
 
