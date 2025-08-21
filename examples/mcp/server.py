@@ -16,7 +16,8 @@ async def add_simple(x: int, y: int) -> int:
     """Add two numbers (simple version)."""
     return x + y
 
-app.add_tools(echo, add_simple)
+app.add_tool(echo)
+app.add_tool(add_simple)
 app.add_tools(*math_tools, *text_tools)
 
 if __name__ == "__main__":
