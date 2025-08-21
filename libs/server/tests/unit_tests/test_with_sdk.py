@@ -89,15 +89,14 @@ async def test_add_langchain_tool() -> None:
         assert data == [
             {
                 "description": "Say hello.",
-                "id": "say_hello@1.0.0",
+                "id": "say_hello",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Echo the message back.",
-                "id": "echo@1.0.0",
+                "id": "echo",
                 "input_schema": {
                     "properties": {"msg": {"type": "string"}},
                     "required": ["msg"],
@@ -105,11 +104,10 @@ async def test_add_langchain_tool() -> None:
                 },
                 "name": "echo",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Add two integers.",
-                "id": "add@1.0.0",
+                "id": "add",
                 "input_schema": {
                     "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
                     "required": ["x", "y"],
@@ -117,7 +115,6 @@ async def test_add_langchain_tool() -> None:
                 },
                 "name": "add",
                 "output_schema": {"type": "integer"},
-                "version": "1.0.0",
             },
         ]
 
@@ -236,11 +233,10 @@ async def test_auth_list_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "id": "say_hello@1.0.0",
+                "id": "say_hello",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             }
         ]
 
@@ -405,23 +401,21 @@ async def test_exposing_existing_langchain_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "id": "say_hello_sync@1.0.0",
+                "id": "say_hello_sync",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_sync",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Say hello.",
-                "id": "say_hello_async@1.0.0",
+                "id": "say_hello_async",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_async",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Multiply two numbers.",
-                "id": "multiply@1.0.0",
+                "id": "multiply",
                 "input_schema": {
                     "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
                     "required": ["a", "b"],
@@ -429,7 +423,6 @@ async def test_exposing_existing_langchain_tools() -> None:
                 },
                 "name": "multiply",
                 "output_schema": {"type": "integer"},
-                "version": "1.0.0",
             },
         ]
 
@@ -451,84 +444,5 @@ async def test_exposing_existing_langchain_tools() -> None:
         assert result == {
             "call_id": AnyStr(),
             "value": 6,
-            "success": True,
-        }
-
-
-async def test_call_tool_by_version() -> None:
-    """Test calling a tool by version."""
-    app = Server()
-
-    @tool
-    async def say_hello_v1() -> str:
-        """Say hello."""
-        return "v1"
-
-    @tool  
-    async def say_hello_v2() -> str:
-        """Say hello."""
-        return "v2"
-
-    # We need to manually set the name since we want both to have "say_hello" name
-    say_hello_v1.name = "say_hello"
-    say_hello_v2.name = "say_hello"
-    
-    app.add_tool(say_hello_v1, version=1)
-    app.add_tool(say_hello_v2, version="2.0.0")
-
-    async with get_async_test_client(app) as client:
-        tools = await client.tools.list()
-        assert tools == [
-            {
-                "description": "Say hello.",
-                "id": "say_hello@1.0.0",
-                "input_schema": {"properties": {}, "type": "object"},
-                "name": "say_hello",
-                "output_schema": {"type": "string"},
-                "version": "1.0.0",
-            },
-            {
-                "description": "Say hello.",
-                "id": "say_hello@2.0.0",
-                "input_schema": {"properties": {}, "type": "object"},
-                "name": "say_hello",
-                "output_schema": {"type": "string"},
-                "version": "2.0.0",
-            },
-        ]
-
-        # call the tool by version
-        result = await client.tools.call("say_hello@1", {})
-        assert result == {
-            "call_id": AnyStr(),
-            "value": "v1",
-            "success": True,
-        }
-
-        result = await client.tools.call("say_hello@1.0.0", {})
-        assert result == {
-            "call_id": AnyStr(),
-            "value": "v1",
-            "success": True,
-        }
-
-        result = await client.tools.call("say_hello@2", {})
-        assert result == {
-            "call_id": AnyStr(),
-            "value": "v2",
-            "success": True,
-        }
-
-        result = await client.tools.call("say_hello@2.0", {})
-        assert result == {
-            "call_id": AnyStr(),
-            "value": "v2",
-            "success": True,
-        }
-
-        result = await client.tools.call("say_hello", {})
-        assert result == {
-            "call_id": AnyStr(),
-            "value": "v2",
             "success": True,
         }
