@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator, Optional
 
 from fastapi import FastAPI
+from langchain_core.tools import tool
 from httpx import ASGITransport, AsyncClient
 from starlette.requests import Request
 
@@ -67,10 +68,12 @@ async def test_422() -> None:
     """Test 422 responses."""
     app = Server()
 
-    @app.add_tool()
+    @tool
     def echo(number: int) -> str:
         """Echo a message."""
         return str(number)
+
+    app.add_tool(echo)
 
     async with get_async_test_client(app) as client:
         response = await client.post("/tools/call", json={})
@@ -98,10 +101,11 @@ async def test_lifespan() -> None:
 
     app = Server(lifespan=lifespan)
 
-    @app.add_tool()
+    @tool
     def what_is_foo(request: Annotated[Request, InjectedRequest]) -> str:
         """Get foo"""
         return request.state.foo
+    app.add_tool(what_is_foo)
 
     # Using Starlette's TestClient to make sure that the lifespan is used.
     # Seems to not be supported with httpx's ASGITransport.
