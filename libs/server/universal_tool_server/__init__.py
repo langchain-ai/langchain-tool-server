@@ -66,9 +66,10 @@ class Server:
         self._enable_mcp = enable_mcp
 
         if enable_mcp:
-            from universal_tool_server.mcp import MCP_APP_PREFIX, create_mcp_app
+            from universal_tool_server.mcp import create_mcp_router
 
-            self.app.mount(MCP_APP_PREFIX, create_mcp_app(self.tool_handler))
+            mcp_router = create_mcp_router(self.tool_handler)
+            self.app.include_router(mcp_router, prefix="/mcp")
 
     @overload
     def add_tool(
