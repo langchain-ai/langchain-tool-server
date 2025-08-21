@@ -27,19 +27,11 @@ env:
   UV_NO_SYNC: "true"
 
 jobs:
-  build:
-    if: github.ref == 'refs/heads/main' || inputs.dangerous-nonmain-release || startsWith(github.ref, 'refs/tags/')
+  # Build client package
+  build-client:
+    if: (github.ref == 'refs/heads/main' || inputs.dangerous-nonmain-release || startsWith(github.ref, 'refs/tags/')) && (github.event_name != 'workflow_dispatch' || github.event.inputs.package == 'both' || github.event.inputs.package == 'client')
     environment: Scheduled testing
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        package:
-          - name: langchain-tool-client
-            path: libs/sdk-py
-          - name: langchain-tool-server
-            path: libs/server
-
 
     steps:
       - uses: actions/checkout@v4
@@ -49,126 +41,94 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Check if should build package
-        id: should-build
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            choice="${{ github.event.inputs.package }}"
-            if [[ "$choice" == "both" || "$choice" == "client" && "${{ matrix.package.name }}" == "langchain-tool-client" || "$choice" == "server" && "${{ matrix.package.name }}" == "langchain-tool-server" ]]; then
-              echo "build=true" >> $GITHUB_OUTPUT
-            else
-              echo "build=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            # For tag pushes, always build both
-            echo "build=true" >> $GITHUB_OUTPUT
-          fi
-
-      # We want to keep this build stage *separate* from the release stage,
-      # so that there's no sharing of permissions between them.
-      # The release stage has trusted publishing and GitHub repo contents write access,
-      # and we want to keep the scope of that access limited just to the release job.
-      # Otherwise, a malicious `build` step (e.g. via a compromised dependency)
-      # could get access to our GitHub or PyPI credentials.
-      #
-      # Per the trusted publishing GitHub Action:
-      # > It is strongly advised to separate jobs for building [...]
-      # > from the publish job.
-      # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
-        if: steps.should-build.outputs.build == 'true'
         run: uv build
-        working-directory: ${{ matrix.package.path }}
+        working-directory: libs/sdk-py
       
       - name: Upload build
-        if: steps.should-build.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.package.name }}
-          path: ${{ matrix.package.path }}/dist/
+          name: dist-langchain-tool-client
+          path: libs/sdk-py/dist/
 
-      - name: Check Version
-        if: steps.should-build.outputs.build == 'true'
-        id: check-version
-        shell: python
-        working-directory: ${{ matrix.package.path }}
-        run: |
-          import os
-          import tomllib
-          with open("pyproject.toml", "rb") as f:
-              data = tomllib.load(f)
-          pkg_name = data["project"]["name"]
-          version = data["project"]["version"]
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"pkg-name={pkg_name}\n")
-              f.write(f"version={version}\n")
+  # Build server package  
+  build-server:
+    if: (github.ref == 'refs/heads/main' || inputs.dangerous-nonmain-release || startsWith(github.ref, 'refs/tags/')) && (github.event_name != 'workflow_dispatch' || github.event.inputs.package == 'both' || github.event.inputs.package == 'server')
+    environment: Scheduled testing
+    runs-on: ubuntu-latest
 
-  publish:
-    needs:
-      - build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python + uv
+        uses: "./.github/actions/uv_setup"
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build project for distribution
+        run: uv build
+        working-directory: libs/server
+      
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-langchain-tool-server
+          path: libs/server/dist/
+
+  # Publish client package
+  publish-client:
+    if: always() && !cancelled() && (github.event_name != 'workflow_dispatch' || github.event.inputs.package == 'both' || github.event.inputs.package == 'client')
+    needs: [build-client]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      # This permission is used for trusted publishing:
-      # https://blog.pypi.org/posts/2023-04-20-introducing-trusted-publishers/
-      #
-      # Trusted publishing has to also be configured on PyPI for each package:
-      # https://docs.pypi.org/trusted-publishers/adding-a-publisher/
       id-token: write
-    
-    strategy:
-      matrix:
-        package:
-          - name: langchain-tool-client
-            path: libs/sdk-py
-          - name: langchain-tool-server
-            path: libs/server
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python + uv
-        uses: "./.github/actions/uv_setup"
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Check if should publish package
-        id: should-publish
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            choice="${{ github.event.inputs.package }}"
-            if [[ "$choice" == "both" || "$choice" == "client" && "${{ matrix.package.name }}" == "langchain-tool-client" || "$choice" == "server" && "${{ matrix.package.name }}" == "langchain-tool-server" ]]; then
-              echo "publish=true" >> $GITHUB_OUTPUT
-            else
-              echo "publish=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            # For tag pushes, always publish both
-            echo "publish=true" >> $GITHUB_OUTPUT
-          fi
-
       - uses: actions/download-artifact@v4
-        if: steps.should-publish.outputs.publish == 'true'
         with:
-          name: dist-${{ matrix.package.name }}
-          path: ${{ matrix.package.path }}/dist/
+          name: dist-langchain-tool-client
+          path: libs/sdk-py/dist/
 
-      - name: Publish package distributions to PyPI
-        if: steps.should-publish.outputs.publish == 'true'
+      - name: Publish langchain-tool-client to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ${{ matrix.package.path }}/dist/
+          packages-dir: libs/sdk-py/dist/
           verbose: true
           print-hash: true
-          # Temp workaround since attestations are on by default as of gh-action-pypi-publish v1.11.0
+          attestations: false
+
+  # Publish server package
+  publish-server:
+    if: always() && !cancelled() && (github.event_name != 'workflow_dispatch' || github.event.inputs.package == 'both' || github.event.inputs.package == 'server')
+    needs: [build-server]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-langchain-tool-server
+          path: libs/server/dist/
+
+      - name: Publish langchain-tool-server to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: libs/server/dist/
+          verbose: true
+          print-hash: true
           attestations: false
 
   # Simplified release creation - only for tag pushes
   mark-release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs:
-      - build
-      - publish
+    needs: [publish-client, publish-server]
     runs-on: ubuntu-latest
     permissions:
       contents: write
