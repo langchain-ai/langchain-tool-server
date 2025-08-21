@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from httpx import HTTPStatusError
 from starlette.authentication import BaseUser
 from starlette.requests import Request
-from universal_tool_client import SyncClient
+from langchain_tool_client import SyncClient
 
 from langchain_tool_server import Server
 from langchain_tool_server._version import __version__

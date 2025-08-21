@@ -92,7 +92,7 @@ Add a client.py file to your project and define your client.
 ```python
 import asyncio
 
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 
 async def main():
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 If you need a synchronous client, you can use the `get_sync_client` function.
 
 ```python
-from universal_tool_client import get_sync_client
+from langchain_tool_client import get_sync_client
 ```
 
 
@@ -178,7 +178,7 @@ import os
 from langchain_anthropic import ChatAnthropic
 from langgraph.prebuilt import create_react_agent
 
-from universal_tool_client import get_sync_client
+from langchain_tool_client import get_sync_client
 
 if "ANTHROPIC_API_KEY" not in os.environ:
     raise ValueError("Please set ANTHROPIC_API_KEY in the environment.")
@@ -297,7 +297,7 @@ A client can list all available tools by calling the `tools.list` method. The se
 The client will only see tools for which they have the required permissions.
 
 ```python
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 async def get_tools():
     # Headers are entirely dependent on how you implement your authentication

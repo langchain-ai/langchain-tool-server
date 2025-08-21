@@ -1,6 +1,6 @@
 import asyncio
 
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 
 async def main():

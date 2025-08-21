@@ -15,7 +15,7 @@ from mcp import stdio_server
 from mcp.server.lowlevel import Server as MCPServer
 from mcp.server.sse import SseServerTransport
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
-from universal_tool_client import AsyncClient, get_async_client
+from langchain_tool_client import AsyncClient, get_async_client
 
 try:
     __version__ = metadata.version(__package__)
