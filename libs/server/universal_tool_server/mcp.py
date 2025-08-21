@@ -182,15 +182,14 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
 
     @router.get("/")
     async def mcp_get_handler(request: Request):
-        """Handle GET requests for session introspection."""
+        """Handle GET requests - SSE not supported, only streamable HTTP."""
         from fastapi.responses import Response
-        session_id = request.headers.get("mcp-session-id")
-        if session_id and session_id in handler.sessions:
-            # Session exists, return 200 with session info
-            return Response(status_code=200, headers={"Mcp-Session-Id": session_id})
-        else:
-            # Session doesn't exist, return 404
-            return Response(status_code=404)
+        # Return 501 Not Implemented to indicate SSE is not supported
+        return Response(
+            status_code=501, 
+            content="SSE not supported - use streamable HTTP only",
+            headers={"Content-Type": "text/plain"}
+        )
 
     @router.delete("/")
     async def mcp_delete_handler(request: Request):
