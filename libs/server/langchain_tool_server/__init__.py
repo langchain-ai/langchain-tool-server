@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import Callable, Optional, Tuple, TypeVar, Union, overload
 
@@ -22,6 +23,16 @@ from langchain_tool_server.tools import (
 )
 
 T = TypeVar("T", bound=Callable)
+
+logger = logging.getLogger(__name__)
+# Ensure the logger has a handler and proper format
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("INFO:     %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 
 class Server:
@@ -85,6 +96,7 @@ class Server:
             permissions: Permissions required to call the tool.
             version: Version of the tool.
         """
+        logger.info(f"Registering tool: {tool.name}")
         self.tool_handler.add(tool, permissions=permissions, version=version)
 
     def add_tools(self, *tools) -> None:
@@ -94,6 +106,7 @@ class Server:
             tools: BaseTool instances (created with @tool decorator).
         """
         for tool in tools:
+            logger.info(f"Registering tool: {tool.name}")
             self.tool_handler.add(tool)
 
     def add_auth(self, auth: Auth) -> None:
