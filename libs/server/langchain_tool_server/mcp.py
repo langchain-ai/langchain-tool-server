@@ -95,7 +95,7 @@ class MCPStreamableHandler:
 
         result = {
             "protocolVersion": PROTOCOL_VERSION,
-            "capabilities": {"tools": {}},
+            "capabilities": {},
             "serverInfo": {"name": "LangChain Tool Server", "version": "2.0.0"},
         }
 
