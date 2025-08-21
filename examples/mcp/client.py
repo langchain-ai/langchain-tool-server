@@ -21,10 +21,25 @@ async def main():
     async with streamable_http.streamablehttp_client(url=url) as streams:
         async with ClientSession(streams[0], streams[1]) as session:
             await session.initialize()
-            tools = await session.list_tools()
-            print(f'Tools: {tools}')
-            result = await session.call_tool("echo", {"msg": "Hello, world!"})
-            print(f'Result from tool call: {result}')
+            
+            print("Testing tools from multi-file server...")
+            
+            # Test math tool
+            print("\n1. Testing factorial tool:")
+            result = await session.call_tool("factorial", {"n": 5})
+            print(f"factorial(5) = {result.content[0].text}")
+            
+            # Test text tool
+            print("\n2. Testing reverse_text tool:")
+            result = await session.call_tool("reverse_text", {"text": "Hello World"})
+            print(f"reverse_text('Hello World') = {result.content[0].text}")
+            
+            # Test utility tool
+            print("\n3. Testing ping tool:")
+            result = await session.call_tool("ping", {})
+            print(f"ping() = {result.content[0].text}")
+            
+            print("\nAll tools working successfully!")
 
 
 if __name__ == "__main__":
