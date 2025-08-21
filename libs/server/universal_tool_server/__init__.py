@@ -174,4 +174,4 @@ class Server:
         return await self.app.__call__(scope, receive, send)
 
 
-__all__ = ["__version__", "Server", "Auth", "InjectedRequest"]
+__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "prebuilts"]

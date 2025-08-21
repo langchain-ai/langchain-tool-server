@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from universal_tool_server import Server
 from universal_tool_server.auth import Auth
+from universal_tool_server.prebuilts import math
 
 app = Server()
 auth = Auth()
@@ -12,17 +13,12 @@ async def echo(msg: str) -> str:
     return msg + "!"
 
 
-@app.add_tool
-async def add(x: int, y: int) -> int:
-    """Add two numbers."""
-    return x + y
-
-
 @app.add_tool()
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
+app.add_tools(*math.TOOLS)
 
 if __name__ == "__main__":
     import uvicorn
