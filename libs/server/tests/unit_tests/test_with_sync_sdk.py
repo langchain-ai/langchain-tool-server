@@ -138,7 +138,7 @@ def test_call_tool() -> None:
         """Add two integers."""
         return x + y
 
-    app.add_tools(say_hello, echo, add)
+    app.add_tools(say_hello, add)
 
     with get_sync_test_client(app) as client:
         response = client.tools.call(
@@ -167,7 +167,7 @@ def test_create_langchain_tools_from_server() -> None:
         """Add two integers."""
         return x + y
 
-    app.add_tools(say_hello, echo, add)
+    app.add_tools(say_hello, add)
 
     with get_sync_test_client(app) as client:
         tools = client.tools.as_langchain_tools(tool_ids=["say_hello", "add"])
@@ -210,15 +210,18 @@ def test_auth_list_tools() -> None:
     auth = Auth()
     app.add_auth(auth)
 
-    @app.add_tool(permissions=["group1"])
+    @tool
     def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool(permissions=["group2"])
+    @tool
     def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tool(say_hello, permissions=["group1"])
+    app.add_tool(add, permissions=["group2"])
 
     @auth.authenticate
     async def authenticate(headers: dict[bytes, bytes]) -> dict:
@@ -250,7 +253,7 @@ async def test_call_tool_with_auth() -> None:
     """Test calling a tool with authentication provided."""
     app = Server()
 
-    @app.add_tool(permissions=["group1"])
+    @tool
     def say_hello(request: Annotated[Request, InjectedRequest]) -> str:
         """Say hello."""
         return "Hello"
@@ -273,6 +276,7 @@ async def test_call_tool_with_auth() -> None:
         return api_key_to_user[api_key]
 
     app.add_auth(auth)
+    app.add_tool(say_hello, permissions=["group1"])
 
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
         assert client.tools.call("say_hello", {}) == {
@@ -297,7 +301,7 @@ async def test_call_tool_with_injected() -> None:
     """Test calling a tool with an injected request."""
     app = Server()
 
-    @app.add_tool(permissions=["authorized"])
+    @tool
     def get_user_identity(request: Annotated[Request, InjectedRequest]) -> str:
         """Get the user's identity."""
         return request.user.identity
@@ -322,6 +326,7 @@ async def test_call_tool_with_injected() -> None:
         return api_key_to_user[api_key]
 
     app.add_auth(auth)
+    app.add_tool(get_user_identity, permissions=["authorized"])
 
     with get_sync_test_client(app, headers={"x-api-key": "1"}) as client:
         result = client.tools.call("get_user_identity")
