@@ -1,5 +1,5 @@
 > We recommend that users use FastMCP and langchain-mcp-adapters to expose langchain tools via MCP using Streamable HTTP as the transport.
-> universal-tool-server was created before Streamable HTTP transport was introduced into the MCP specification as a stopgap solution.
+> langchain-tool-server was created before Streamable HTTP transport was introduced into the MCP specification as a stopgap solution.
 
 ```python
 from langchain_core.tools import tool
@@ -35,7 +35,7 @@ Users working in a local environment that need MCP, [can enable MCP support](#MC
 ## Installation
 
 ```bash
-pip install universal-tool-server open-tool-client
+pip install langchain-tool-server open-tool-client
 ```
 
 ## Example Usage
@@ -115,7 +115,7 @@ from langchain_tool_client import get_async_client
 async def main():
     if len(sys.argv) < 2:
         print(
-            "Usage: uv run client.py url of universal-tool-server  (i.e. http://localhost:8080/)>"
+            "Usage: uv run client.py url of langchain-tool-server  (i.e. http://localhost:8080/)>"
         )
         sys.exit(1)
 

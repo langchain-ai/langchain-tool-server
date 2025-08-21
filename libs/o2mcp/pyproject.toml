@@ -27,7 +27,7 @@ test = [
 ]
 
 [project.urls]
-repository = "https://github.com/langchain-ai/universal-tool-server"
+repository = "https://github.com/langchain-ai/langchain-tool-server"
 
 
 [tool.pytest.ini_options]

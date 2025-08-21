@@ -174,7 +174,7 @@ dependencies = [
     { name = "langgraph-prebuilt" },
     { name = "mcp" },
     { name = "universal-tool-client" },
-    { name = "universal-tool-server" },
+    { name = "langchain-tool-server" },
 ]
 
 [package.dev-dependencies]
@@ -190,7 +190,7 @@ requires-dist = [
     { name = "langgraph-prebuilt", specifier = ">=0.1.2" },
     { name = "mcp", specifier = ">=1.13.0" },
     { name = "universal-tool-client", directory = "../libs/sdk-py" },
-    { name = "universal-tool-server", directory = "../libs/server" },
+    { name = "langchain-tool-server", directory = "../libs/server" },
 ]
 
 [package.metadata.requires-dev]
@@ -997,7 +997,7 @@ test = [
 ]
 
 [[package]]
-name = "universal-tool-server"
+name = "langchain-tool-server"
 version = "0.0.3"
 source = { directory = "../libs/server" }
 dependencies = [

@@ -18,7 +18,7 @@ Users working in a local environment that need MCP, [can enable MCP support](#MC
 ## Installation
 
 ```bash
-pip install universal-tool-server open-tool-client
+pip install langchain-tool-server open-tool-client
 ```
 
 ## Example Usage
@@ -98,7 +98,7 @@ from langchain_tool_client import get_async_client
 async def main():
     if len(sys.argv) < 2:
         print(
-            "Usage: uv run client.py url of universal-tool-server  (i.e. http://localhost:8080/)>"
+            "Usage: uv run client.py url of langchain-tool-server  (i.e. http://localhost:8080/)>"
         )
         sys.exit(1)
 

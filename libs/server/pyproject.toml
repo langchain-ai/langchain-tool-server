@@ -1,5 +1,5 @@
 [project]
-name = "universal-tool-server"
+name = "langchain-tool-server"
 version = "0.0.3"
 description = "Universal Tool Server (Python)"
 readme = "README.md"
@@ -29,7 +29,7 @@ test = [
 ]
 
 [project.urls]
-repository = "https://github.com/langchain-ai/universal-tool-server"
+repository = "https://github.com/langchain-ai/langchain-tool-server"
 
 
 [tool.pytest.ini_options]

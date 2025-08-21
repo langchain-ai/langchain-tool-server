@@ -11,7 +11,7 @@ dependencies = [
     "langgraph-prebuilt>=0.1.2",
     "mcp>=1.13.0",
     "universal-tool-client",
-    "universal-tool-server",
+    "langchain-tool-server",
 ]
 
 
@@ -21,6 +21,6 @@ test = [
 ]
 
 [tool.uv.sources]
-universal-tool-server = { path = "../libs/server" }
+langchain-tool-server = { path = "../libs/server" }
 universal-tool-client = { path = "../libs/sdk-py" }
 langchain-core = { path = "../../langchain/libs/core", editable = true }
