@@ -83,13 +83,13 @@ class Server:
             self.app.include_router(mcp_router, prefix="/mcp")
 
     def add_tool(
-        self, 
-        tool, 
-        *, 
+        self,
+        tool,
+        *,
         permissions: list[str] | None = None,
     ) -> None:
         """Add a LangChain tool to the server.
-        
+
         Args:
             tool: A BaseTool instance (created with @tool decorator).
             permissions: Permissions required to call the tool.
@@ -99,7 +99,7 @@ class Server:
 
     def add_tools(self, *tools) -> None:
         """Add multiple LangChain tools at once.
-        
+
         Args:
             tools: BaseTool instances (created with @tool decorator).
         """

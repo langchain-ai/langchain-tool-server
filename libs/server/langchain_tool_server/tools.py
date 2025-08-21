@@ -171,9 +171,6 @@ class ToolDefinition(TypedDict):
     """The output schema of the tool. This is a JSON schema."""
 
 
-
-
-
 class ToolHandler:
     def __init__(self) -> None:
         """Initializes the tool handler."""

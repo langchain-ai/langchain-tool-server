@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator, Optional
 
 from fastapi import FastAPI
-from langchain_core.tools import tool
 from httpx import ASGITransport, AsyncClient
+from langchain_core.tools import tool
 from starlette.requests import Request
 
 from langchain_tool_server import Server
@@ -105,6 +105,7 @@ async def test_lifespan() -> None:
     def what_is_foo(request: Annotated[Request, InjectedRequest]) -> str:
         """Get foo"""
         return request.state.foo
+
     app.add_tool(what_is_foo)
 
     # Using Starlette's TestClient to make sure that the lifespan is used.
