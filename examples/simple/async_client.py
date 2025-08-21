@@ -13,7 +13,7 @@ async def main():
     url = sys.argv[1]
     client = get_async_client(url=url)
     # Check server status
-    print(await client.ok())  # "OK"
+    print(await client.health())  # Server health check
     print(await client.info())  # Server version and other information
 
     # List tools
@@ -23,7 +23,7 @@ async def main():
 
     # Get as langchain tools
     select_tools = ["echo", "add"]
-    tools = await client.tools.as_langchain_tools(select_tools)
+    tools = await client.tools.as_langchain_tools(tool_ids=select_tools)
     # Async
     print(await tools[0].ainvoke({"msg": "Hello"}))  # "Hello!"
     print(await tools[1].ainvoke({"x": 1, "y": 3}))  # 4
