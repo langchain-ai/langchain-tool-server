@@ -91,15 +91,14 @@ def test_add_langchain_tool() -> None:
         assert data == [
             {
                 "description": "Say hello.",
-                "id": "say_hello@1.0.0",
+                "id": "say_hello",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Echo the message back.",
-                "id": "echo@1.0.0",
+                "id": "echo",
                 "input_schema": {
                     "properties": {"msg": {"type": "string"}},
                     "required": ["msg"],
@@ -107,11 +106,10 @@ def test_add_langchain_tool() -> None:
                 },
                 "name": "echo",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Add two integers.",
-                "id": "add@1.0.0",
+                "id": "add",
                 "input_schema": {
                     "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
                     "required": ["x", "y"],
@@ -119,7 +117,6 @@ def test_add_langchain_tool() -> None:
                 },
                 "name": "add",
                 "output_schema": {"type": "integer"},
-                "version": "1.0.0",
             },
         ]
 
@@ -238,11 +235,10 @@ def test_auth_list_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "id": "say_hello@1.0.0",
+                "id": "say_hello",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             }
         ]
 
@@ -407,23 +403,21 @@ async def test_exposing_existing_langchain_tools() -> None:
         assert tools == [
             {
                 "description": "Say hello.",
-                "id": "say_hello_sync@1.0.0",
+                "id": "say_hello_sync",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_sync",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Say hello.",
-                "id": "say_hello_async@1.0.0",
+                "id": "say_hello_async",
                 "input_schema": {"properties": {}, "type": "object"},
                 "name": "say_hello_async",
                 "output_schema": {"type": "string"},
-                "version": "1.0.0",
             },
             {
                 "description": "Multiply two numbers.",
-                "id": "multiply@1.0.0",
+                "id": "multiply",
                 "input_schema": {
                     "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
                     "required": ["a", "b"],
@@ -431,7 +425,6 @@ async def test_exposing_existing_langchain_tools() -> None:
                 },
                 "name": "multiply",
                 "output_schema": {"type": "integer"},
-                "version": "1.0.0",
             },
         ]
 
