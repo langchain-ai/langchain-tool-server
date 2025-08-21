@@ -34,9 +34,9 @@ async def main():
             result = await session.call_tool("reverse_text", {"text": "Hello World"})
             print(f"reverse_text('Hello World') = {result.content[0].text}")
             
-            # Test utility tool
-            print("\n3. Testing ping tool:")
-            result = await session.call_tool("ping", {})
+            # Test echo tool
+            print("\n3. Testing echo:")
+            result = await session.call_tool("echo", {"msg": "Hey there"})
             print(f"ping() = {result.content[0].text}")
             
             print("\nAll tools working successfully!")

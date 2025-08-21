@@ -17,18 +17,5 @@ async def uppercase(text: str) -> str:
     """Convert text to uppercase."""
     return text.upper()
 
-@tool
-async def lowercase(text: str) -> str:
-    """Convert text to lowercase."""
-    return text.lower()
-
-@tool
-async def count_characters(text: str, include_spaces: bool = True) -> int:
-    """Count characters in text, optionally excluding spaces."""
-    if include_spaces:
-        return len(text)
-    else:
-        return len(text.replace(" ", ""))
-
 # Export all tools for bulk registration
-TOOLS = [reverse_text, count_words, uppercase, lowercase, count_characters]
+TOOLS = [reverse_text, count_words, uppercase]

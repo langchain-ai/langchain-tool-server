@@ -13,11 +13,6 @@ async def multiply(x: int, y: int) -> int:
     return x * y
 
 @tool
-async def power(base: int, exponent: int) -> int:
-    """Raise a number to a power."""
-    return base ** exponent
-
-@tool
 async def factorial(n: int) -> int:
     """Calculate the factorial of a number."""
     if n < 0:
@@ -30,4 +25,4 @@ async def factorial(n: int) -> int:
     return result
 
 # Export all tools for bulk registration
-TOOLS = [add, multiply, power, factorial]
+TOOLS = [add, multiply, factorial]
