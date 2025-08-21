@@ -8,7 +8,7 @@ dependencies = [
     "orjson>=3.10.1",
     "httpx>=0.22.1",
     "mcp>=1.4.1",
-    "universal-tool-client>=0.0.2",
+    "langchain-tool-client>=0.0.2",
     "uvicorn>=0.20.0",
 ]
 

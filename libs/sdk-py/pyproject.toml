@@ -1,5 +1,5 @@
 [project]
-name = "universal-tool-client"
+name = "langchain-tool-client"
 version = "0.0.2"
 description = "Universal Tool Client SDK (Python)"
 readme = "README.md"

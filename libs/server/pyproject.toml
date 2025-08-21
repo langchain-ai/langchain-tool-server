@@ -25,7 +25,7 @@ test = [
     "pytest-socket>=0.7.0",
     "pytest-timeout>=2.3.1",
     "ruff>=0.9.7",
-    "universal-tool-client",
+    "langchain-tool-client",
 ]
 
 [project.urls]
@@ -73,7 +73,7 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 
 [tool.uv.sources]
-universal-tool-client = { path = "../sdk-py" }
+langchain-tool-client = { path = "../sdk-py" }
 
 [build-system]
 requires = ["hatchling"]
