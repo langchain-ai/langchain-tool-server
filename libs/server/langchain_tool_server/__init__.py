@@ -71,85 +71,30 @@ class Server:
             mcp_router = create_mcp_router(self.tool_handler)
             self.app.include_router(mcp_router, prefix="/mcp")
 
-    @overload
     def add_tool(
-        self,
-        fn: T,
-        *,
+        self, 
+        tool, 
+        *, 
         permissions: list[str] | None = None,
         version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
-    ) -> T: ...
-
-    @overload
-    def add_tool(
-        self,
-        *,
-        permissions: list[str] | None = None,
-        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
-    ) -> Callable[[T], T]: ...
-
-    def add_tool(
-        self,
-        fn: Optional[T] = None,
-        *,
-        permissions: list[str] | None = None,
-        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
-    ) -> Union[T, Callable[[T], T]]:
-        """Use to add a tool to the server.
-
-        This method works as either a decorator or a function.
-
-        Can be used both with and without parentheses:
-
-        Example with parentheses:
-
-            @app.add_tool()
-            async def echo(msg: str) -> str:
-                return msg + "!"
-
-        Example without parentheses:
-
-            @app.tool
-            async def add(x: int, y: int) -> int:
-                return x + y
-
-        Example as a function:
-
-            async def echo(msg: str) -> str:
-                return msg + "!"
-
-            app.add_tool(echo)
+    ) -> None:
+        """Add a LangChain tool to the server.
+        
+        Args:
+            tool: A BaseTool instance (created with @tool decorator).
+            permissions: Permissions required to call the tool.
+            version: Version of the tool.
         """
-
-        def decorator(fn: T) -> T:
-            # Register the tool
-            self.tool_handler.add(fn, permissions=permissions, version=version)
-
-            # Log the registration with details
-            tool_name = getattr(fn, "name", getattr(fn, "__name__", "unknown"))
-            tool_description = getattr(fn, "description", "No description")
-            version_str = (
-                ".".join(map(str, version))
-                if isinstance(version, tuple)
-                else str(version)
-            )
-            permissions_str = ", ".join(permissions) if permissions else "none"
-
-            print(
-                f"Registered tool: {tool_name} | {tool_description} | v{version_str} | permissions: {permissions_str}"
-            )
-
-            # Return the original. The decorator is only to register the tool.
-            return fn
-
-        if fn is not None:
-            return decorator(fn)
-        return decorator
+        self.tool_handler.add(tool, permissions=permissions, version=version)
 
     def add_tools(self, *tools) -> None:
-        """Add multiple tools at once."""
+        """Add multiple LangChain tools at once.
+        
+        Args:
+            tools: BaseTool instances (created with @tool decorator).
+        """
         for tool in tools:
-            self.add_tool(tool)
+            self.tool_handler.add(tool)
 
     def add_auth(self, auth: Auth) -> None:
         """Add an authentication handler to the server."""

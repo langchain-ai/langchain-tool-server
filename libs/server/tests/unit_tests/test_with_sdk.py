@@ -6,6 +6,7 @@ from typing import Annotated, AsyncGenerator, Optional, cast
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, HTTPStatusError
+from langchain_core.tools import tool
 from langchain_tool_client import AsyncClient, get_async_client
 from starlette.authentication import BaseUser
 from starlette.requests import Request
@@ -66,20 +67,22 @@ async def test_add_langchain_tool() -> None:
         tools = await client.tools.list()
         assert tools == []
 
-    @app.add_tool
+    @tool
     async def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     async def echo(msg: str) -> str:
         """Echo the message back."""
         return msg
 
-    @app.add_tool
+    @tool
     async def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, echo, add)
 
     async with get_async_test_client(app) as client:
         data = await client.tools.list()
@@ -123,15 +126,17 @@ async def test_call_tool() -> None:
     """Test call parameterless tool."""
     app = Server()
 
-    @app.add_tool
+    @tool
     async def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     async def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, add)
 
     async with get_async_test_client(app) as client:
         response = await client.tools.call(
@@ -150,15 +155,17 @@ async def test_create_langchain_tools_from_server() -> None:
     """Test create langchain tools from server."""
     app = Server()
 
-    @app.add_tool
+    @tool
     async def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool
+    @tool
     async def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tools(say_hello, add)
 
     async with get_async_test_client(app) as client:
         tools = await client.tools.as_langchain_tools(tool_ids=["say_hello", "add"])
@@ -201,15 +208,18 @@ async def test_auth_list_tools() -> None:
     auth = Auth()
     app.add_auth(auth)
 
-    @app.add_tool(permissions=["group1"])
+    @tool
     async def say_hello() -> str:
         """Say hello."""
         return "Hello"
 
-    @app.add_tool(permissions=["group2"])
+    @tool
     async def add(x: int, y: int) -> int:
         """Add two integers."""
         return x + y
+
+    app.add_tool(say_hello, permissions=["group1"])
+    app.add_tool(add, permissions=["group2"])
 
     @auth.authenticate
     async def authenticate(headers: dict[bytes, bytes]) -> dict:
@@ -241,7 +251,7 @@ async def test_call_tool_with_auth() -> None:
     """Test calling a tool with authentication provided."""
     app = Server()
 
-    @app.add_tool(permissions=["group1"])
+    @tool
     async def say_hello(request: Annotated[Request, InjectedRequest]) -> str:
         """Say hello."""
         return "Hello"
@@ -264,6 +274,7 @@ async def test_call_tool_with_auth() -> None:
         return api_key_to_user[api_key]
 
     app.add_auth(auth)
+    app.add_tool(say_hello, permissions=["group1"])
 
     async with get_async_test_client(app, headers={"x-api-key": "1"}) as client:
         assert await client.tools.call("say_hello", {}) == {
@@ -288,7 +299,7 @@ async def test_call_tool_with_injected() -> None:
     """Test calling a tool with an injected request."""
     app = Server()
 
-    @app.add_tool(permissions=["authorized"])
+    @tool
     async def get_user_identity(request: Annotated[Request, InjectedRequest]) -> str:
         """Get the user's identity."""
         return request.user.identity
@@ -313,6 +324,7 @@ async def test_call_tool_with_injected() -> None:
         return api_key_to_user[api_key]
 
     app.add_auth(auth)
+    app.add_tool(get_user_identity, permissions=["authorized"])
 
     async with get_async_test_client(app, headers={"x-api-key": "1"}) as client:
         result = await client.tools.call("get_user_identity")
@@ -447,15 +459,22 @@ async def test_call_tool_by_version() -> None:
     """Test calling a tool by version."""
     app = Server()
 
-    @app.add_tool(version=1)
-    async def say_hello() -> str:
+    @tool
+    async def say_hello_v1() -> str:
         """Say hello."""
         return "v1"
 
-    @app.add_tool(version="2.0.0")
-    async def say_hello() -> str:  # noqa: F811
+    @tool  
+    async def say_hello_v2() -> str:
         """Say hello."""
         return "v2"
+
+    # We need to manually set the name since we want both to have "say_hello" name
+    say_hello_v1.name = "say_hello"
+    say_hello_v2.name = "say_hello"
+    
+    app.add_tool(say_hello_v1, version=1)
+    app.add_tool(say_hello_v2, version="2.0.0")
 
     async with get_async_test_client(app) as client:
         tools = await client.tools.list()
