@@ -240,7 +240,7 @@ class ToolHandler:
 
     def add(
         self,
-        tool: Union[BaseTool, Callable],
+        tool: BaseTool,
         *,
         permissions: list[str] | None = None,
         # Default to version 1.0.0
@@ -249,50 +249,55 @@ class ToolHandler:
         """Register a tool in the catalog.
 
         Args:
-            tool: Implementation of the tool to register.
-            version: Version of the tool.
+            tool: A BaseTool instance (created with @tool decorator).
             permissions: Permissions required to call the tool.
+            version: Version of the tool.
         """
-        # If not already a BaseTool, we'll convert it to one using
-        # the tool decorator.
         if not isinstance(tool, BaseTool):
-            tool = tool_decorator(tool)
+            # Try to get the function name for a better error message
+            func_name = getattr(tool, '__name__', 'unknown')
+            raise TypeError(
+                f"Function '{func_name}' must be decorated with @tool decorator. "
+                f"Got {type(tool)}.\n"
+                f"Change:\n"
+                f"  async def {func_name}(...):\n"
+                f"To:\n"
+                f"  @tool\n"
+                f"  async def {func_name}(...):"
+            )
 
-        if isinstance(tool, BaseTool):
-            from pydantic import BaseModel
+        from pydantic import BaseModel
 
-            if not issubclass(tool.args_schema, BaseModel):
-                raise NotImplementedError(
-                    "Expected args_schema to be a Pydantic model. "
-                    f"Got {type(tool.args_schema)}."
-                    "This is not yet supported."
-                )
+        if not issubclass(tool.args_schema, BaseModel):
+            raise NotImplementedError(
+                "Expected args_schema to be a Pydantic model. "
+                f"Got {type(tool.args_schema)}."
+                "This is not yet supported."
+            )
 
-            accepts = []
-            for name, field in tool.args_schema.model_fields.items():
-                if field.annotation is Request:
-                    accepts.append((name, Request))
+        accepts = []
+        for name, field in tool.args_schema.model_fields.items():
+            if field.annotation is Request:
+                accepts.append((name, Request))
 
-            output_schema = get_output_schema(tool)
+        output_schema = get_output_schema(tool)
 
-            version = _normalize_version(version)
-            version_str = ".".join(map(str, version))
+        version = _normalize_version(version)
+        version_str = ".".join(map(str, version))
 
-            registered_tool = {
-                "id": f"{tool.name}@{version_str}",
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": convert_to_openai_function(tool)["parameters"],
-                "output_schema": output_schema,
-                "fn": cast(Callable[[Dict[str, Any]], Awaitable[Any]], tool.ainvoke),
-                "permissions": cast(set[str], set(permissions or [])),
-                "accepts": accepts,
-                # Register everything as version 1.0.0 for now.
-                "version": version,
-                "metadata": tool.metadata,
-            }
-        else:
-            raise AssertionError("Reached unreachable code")
+        registered_tool = {
+            "id": f"{tool.name}@{version_str}",
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": convert_to_openai_function(tool)["parameters"],
+            "output_schema": output_schema,
+            "fn": cast(Callable[[Dict[str, Any]], Awaitable[Any]], tool.ainvoke),
+            "permissions": cast(set[str], set(permissions or [])),
+            "accepts": accepts,
+            # Register everything as version 1.0.0 for now.
+            "version": version,
+            "metadata": tool.metadata,
+        }
 
         if registered_tool["id"] in self.catalog:
             # Add unique ID to support duplicated tools?
