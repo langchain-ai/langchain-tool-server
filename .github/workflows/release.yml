@@ -1,23 +1,20 @@
 name: release
-run-name: Release ${{ inputs.working-directory }} by @${{ github.actor }}
+run-name: Release packages by @${{ github.actor }}
 on:
-  workflow_call:
-    inputs:
-      working-directory:
-        required: true
-        type: string
-        description: "From which folder this pipeline executes"
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
-      working-directory:
-        description: "From which folder this pipeline executes"
-        default: "libs/server"
+      package:
+        description: "Which package to publish"
+        default: "both"
         required: true
         type: choice
         options:
-          - "libs/server"
-          - "libs/sdk-py"
-          - "libs/o2mcp"
+          - "both"
+          - "client"
+          - "server"
       dangerous-nonmain-release:
         required: false
         type: boolean
@@ -31,13 +28,18 @@ env:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main' || inputs.dangerous-nonmain-release
+    if: github.ref == 'refs/heads/main' || inputs.dangerous-nonmain-release || startsWith(github.ref, 'refs/tags/')
     environment: Scheduled testing
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        package:
+          - name: langchain-tool-client
+            path: libs/sdk-py
+          - name: langchain-tool-server
+            path: libs/server
 
-    outputs:
-      pkg-name: ${{ steps.check-version.outputs.pkg-name }}
-      version: ${{ steps.check-version.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +48,21 @@ jobs:
         uses: "./.github/actions/uv_setup"
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check if should build package
+        id: should-build
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            choice="${{ github.event.inputs.package }}"
+            if [[ "$choice" == "both" || "$choice" == "client" && "${{ matrix.package.name }}" == "langchain-tool-client" || "$choice" == "server" && "${{ matrix.package.name }}" == "langchain-tool-server" ]]; then
+              echo "build=true" >> $GITHUB_OUTPUT
+            else
+              echo "build=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # For tag pushes, always build both
+            echo "build=true" >> $GITHUB_OUTPUT
+          fi
 
       # We want to keep this build stage *separate* from the release stage,
       # so that there's no sharing of permissions between them.
@@ -59,18 +76,22 @@ jobs:
       # > from the publish job.
       # https://github.com/pypa/gh-action-pypi-publish#non-goals
       - name: Build project for distribution
+        if: steps.should-build.outputs.build == 'true'
         run: uv build
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ matrix.package.path }}
+      
       - name: Upload build
+        if: steps.should-build.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: ${{ inputs.working-directory }}/dist/
+          name: dist-${{ matrix.package.name }}
+          path: ${{ matrix.package.path }}/dist/
 
       - name: Check Version
+        if: steps.should-build.outputs.build == 'true'
         id: check-version
         shell: python
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ matrix.package.path }}
         run: |
           import os
           import tomllib
@@ -86,6 +107,7 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       # This permission is used for trusted publishing:
       # https://blog.pypi.org/posts/2023-04-20-introducing-trusted-publishers/
@@ -93,10 +115,14 @@ jobs:
       # Trusted publishing has to also be configured on PyPI for each package:
       # https://docs.pypi.org/trusted-publishers/adding-a-publisher/
       id-token: write
-
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
+    
+    strategy:
+      matrix:
+        package:
+          - name: langchain-tool-client
+            path: libs/sdk-py
+          - name: langchain-tool-server
+            path: libs/server
 
     steps:
       - uses: actions/checkout@v4
@@ -106,54 +132,53 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Check if should publish package
+        id: should-publish
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            choice="${{ github.event.inputs.package }}"
+            if [[ "$choice" == "both" || "$choice" == "client" && "${{ matrix.package.name }}" == "langchain-tool-client" || "$choice" == "server" && "${{ matrix.package.name }}" == "langchain-tool-server" ]]; then
+              echo "publish=true" >> $GITHUB_OUTPUT
+            else
+              echo "publish=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # For tag pushes, always publish both
+            echo "publish=true" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.should-publish.outputs.publish == 'true'
         with:
-          name: dist
-          path: ${{ inputs.working-directory }}/dist/
+          name: dist-${{ matrix.package.name }}
+          path: ${{ matrix.package.path }}/dist/
 
       - name: Publish package distributions to PyPI
+        if: steps.should-publish.outputs.publish == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ${{ inputs.working-directory }}/dist/
+          packages-dir: ${{ matrix.package.path }}/dist/
           verbose: true
           print-hash: true
           # Temp workaround since attestations are on by default as of gh-action-pypi-publish v1.11.0
           attestations: false
 
+  # Simplified release creation - only for tag pushes
   mark-release:
+    if: startsWith(github.ref, 'refs/tags/')
     needs:
       - build
       - publish
     runs-on: ubuntu-latest
     permissions:
-      # This permission is needed by `ncipollo/release-action` to
-      # create the GitHub release.
       contents: write
-
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python + uv
-        uses: "./.github/actions/uv_setup"
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: ${{ inputs.working-directory }}/dist/
-
-      - name: Create Tag
+      - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
-          tag: ${{needs.build.outputs.pkg-name}}==${{ needs.build.outputs.version }}
-          body: ${{ needs.release-notes.outputs.release-body }}
-          commit: main
           makeLatest: true
