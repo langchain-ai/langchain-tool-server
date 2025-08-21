@@ -1,5 +1,3 @@
-"""Math tools for universal-tool-server."""
-
 from langchain_core.tools import tool
 
 

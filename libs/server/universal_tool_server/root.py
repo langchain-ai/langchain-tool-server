@@ -22,7 +22,7 @@ async def index() -> str:
     html_content = f"""
     <html>
         <head>
-            <title>Universal Tool Server</title>
+            <title>LangChain Tool Server</title>
         </head>
         <body>
         <div>
