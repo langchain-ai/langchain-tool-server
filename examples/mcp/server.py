@@ -21,4 +21,4 @@ app.add_tools(*math_tools, *text_tools)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("__main__:app", reload=True, port=8002)
+    uvicorn.run("__main__:app", reload=True, port=8002, use_colors=False)
