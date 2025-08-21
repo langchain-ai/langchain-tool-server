@@ -1,24 +1,4 @@
-> We recommend that users use FastMCP and langchain-mcp-adapters to expose langchain tools via MCP using Streamable HTTP as the transport.
-> universal-tool-server was created before Streamable HTTP transport was introduced into the MCP specification as a stopgap solution.
-
-```python
-from langchain_core.tools import tool
-from langchain_mcp_adapters.tools import to_fastmcp
-from mcp.server.fastmcp import FastMCP
-
-
-@tool
-def add(a: int, b: int) -> int:
-    """Add two numbers"""
-    return a + b
-
-
-fastmcp_tool = to_fastmcp(add)
-
-mcp = FastMCP("Math", tools=[fastmcp_tool])
-```
-
-# Universal Tool Server
+# LangChain Tool Server
 
 A dedicated tool server decouples the creation of specialized tools (e.g., for retrieving data from specific knowledge sources) from agent development. This separation enables different teams to contribute and manage tools independently. Agents can then be rapidly configured—by simply specifying a prompt and a set of accessible tools. This streamlined approach simplifies authentication and authorization and accelerates the deployment of agents into production.
 
@@ -35,7 +15,7 @@ Users working in a local environment that need MCP, [can enable MCP support](#MC
 ## Installation
 
 ```bash
-pip install universal-tool-server open-tool-client
+pip install langchain-tool-server open-tool-client
 ```
 
 ## Example Usage
@@ -48,8 +28,8 @@ Add a server.py file to your project and define your tools with type hints.
 from typing import Annotated
 from starlette.requests import Request
 
-from universal_tool_server.tools import InjectedRequest
-from universal_tool_server import Server, Auth
+from langchain_tool_server.tools import InjectedRequest
+from langchain_tool_server import Server, Auth
 
 app = Server()
 auth = Auth()
@@ -109,13 +89,13 @@ Add a client.py file to your project and define your client.
 ```python
 import asyncio
 
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 
 async def main():
     if len(sys.argv) < 2:
         print(
-            "Usage: uv run client.py url of universal-tool-server  (i.e. http://localhost:8080/)>"
+            "Usage: uv run client.py url of langchain-tool-server  (i.e. http://localhost:8080/)>"
         )
         sys.exit(1)
 
@@ -149,7 +129,7 @@ if __name__ == "__main__":
 If you need a synchronous client, you can use the `get_sync_client` function.
 
 ```python
-from universal_tool_client import get_sync_client
+from langchain_tool_client import get_sync_client
 ```
 
 
@@ -195,7 +175,7 @@ import os
 from langchain_anthropic import ChatAnthropic
 from langgraph.prebuilt import create_react_agent
 
-from universal_tool_client import get_sync_client
+from langchain_tool_client import get_sync_client
 
 if "ANTHROPIC_API_KEY" not in os.environ:
     raise ValueError("Please set ANTHROPIC_API_KEY in the environment.")
@@ -229,7 +209,7 @@ You can enable support for the MCP SSE protocol by passing `enable_mcp=True` to 
 > Auth is not supported when using MCP SSE. So if you try to use auth and enable MCP, the server will raise an exception by design.
 
 ```python
-from universal_tool_server import Server
+from langchain_tool_server import Server
 
 app = Server(enable_mcp=True)
 
@@ -294,7 +274,7 @@ A tool can request access to Starlette's `Request` object by using the `Injected
 
 ```python
 from typing import Annotated
-from universal_tool_server import InjectedRequest
+from langchain_tool_server import InjectedRequest
 from starlette.requests import Request
 
 
@@ -314,7 +294,7 @@ A client can list all available tools by calling the `tools.list` method. The se
 The client will only see tools for which they have the required permissions.
 
 ```python
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 async def get_tools():
     # Headers are entirely dependent on how you implement your authentication
@@ -353,7 +333,7 @@ The function should either:
 2. Raise an `auth.exceptions.HTTPException` if the request cannot be authenticated.
 
 ```python
-from universal_tool_server import Auth
+from langchain_tool_server import Auth
 
 auth = Auth()
 

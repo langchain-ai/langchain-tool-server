@@ -467,7 +467,7 @@ class InjectedRequest(InjectedToolArg):
         ..code-block:: python
 
             from typing import Annotated
-            from universal_tool_server.server.tools import InjectedRequest
+            from langchain_tool_server.server.tools import InjectedRequest
             from starlette.requests import Request
 
             @app.tool(permissions=["group1"])

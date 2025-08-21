@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from universal_tool_server.tools import CallToolRequest, ToolHandler
+from langchain_tool_server.tools import CallToolRequest, ToolHandler
 
 MCP_APP_PREFIX = "/mcp"
 PROTOCOL_VERSION = "2025-03-26"
@@ -96,7 +96,7 @@ class MCPStreamableHandler:
         result = {
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "Universal Tool Server", "version": "2.0.0"},
+            "serverInfo": {"name": "LangChain Tool Server", "version": "2.0.0"},
         }
 
         return self.create_response(body.get("id"), result, session)

@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 from typing_extensions import TypedDict
 
-from universal_tool_server._version import __version__
+from langchain_tool_server._version import __version__
 
 from .splash import SPLASH
 
@@ -22,7 +22,7 @@ async def index() -> str:
     html_content = f"""
     <html>
         <head>
-            <title>Universal Tool Server</title>
+            <title>LangChain Tool Server</title>
         </head>
         <body>
         <div>

@@ -1,7 +1,7 @@
 [project]
-name = "universal-tool-server"
+name = "langchain-tool-server"
 version = "0.0.3"
-description = "Universal Tool Server (Python)"
+description = "LangChain Tool Server (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -25,11 +25,11 @@ test = [
     "pytest-socket>=0.7.0",
     "pytest-timeout>=2.3.1",
     "ruff>=0.9.7",
-    "universal-tool-client",
+    "langchain-tool-client",
 ]
 
 [project.urls]
-repository = "https://github.com/langchain-ai/universal-tool-server"
+repository = "https://github.com/langchain-ai/langchain-tool-server"
 
 
 [tool.pytest.ini_options]
@@ -73,7 +73,7 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 
 [tool.uv.sources]
-universal-tool-client = { path = "../sdk-py" }
+langchain-tool-client = { path = "../sdk-py" }
 
 [build-system]
 requires = ["hatchling"]

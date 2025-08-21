@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from starlette.requests import Request
 
-from universal_tool_server import Server
-from universal_tool_server._version import __version__
-from universal_tool_server.tools import InjectedRequest
+from langchain_tool_server import Server
+from langchain_tool_server._version import __version__
+from langchain_tool_server.tools import InjectedRequest
 
 from ..unit_tests.utils import AnyStr
 

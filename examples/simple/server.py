@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from universal_tool_server import Server
-from universal_tool_server.auth import Auth
-from universal_tool_server.prebuilts import math
+from langchain_tool_server import Server
+from langchain_tool_server.auth import Auth
+from langchain_tool_server.prebuilts import math
 from langchain_core.tools import tool
 
 app = Server()

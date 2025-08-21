@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 
-from universal_tool_server.auth import exceptions, types
+from langchain_tool_server.auth import exceptions, types
 
 AH = typing.TypeVar("AH", bound=types.Authenticator)
 
@@ -15,7 +15,7 @@ class Auth:
 
     ???+ example "Basic Usage"
         ```python
-        from universal_tool_server.auth import Auth
+        from langchain_tool_server.auth import Auth
 
         my_auth = Auth()
 

@@ -6,15 +6,15 @@ from fastapi.exceptions import RequestValidationError
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.types import Lifespan, Receive, Scope, Send
 
-from universal_tool_server import root
-from universal_tool_server._version import __version__
-from universal_tool_server.auth import Auth
-from universal_tool_server.auth.middleware import (
+from langchain_tool_server import root
+from langchain_tool_server._version import __version__
+from langchain_tool_server.auth import Auth
+from langchain_tool_server.auth.middleware import (
     ServerAuthenticationBackend,
     on_auth_error,
 )
-from universal_tool_server.splash import SPLASH
-from universal_tool_server.tools import (
+from langchain_tool_server.splash import SPLASH
+from langchain_tool_server.tools import (
     InjectedRequest,
     ToolHandler,
     create_tools_router,
@@ -46,7 +46,7 @@ class Server:
         self.app = FastAPI(
             version=__version__,
             lifespan=full_lifespan,
-            title="Universal Tool Server",
+            title="LangChain Tool Server",
         )
 
         # Add a global exception handler for validation errors
@@ -66,7 +66,7 @@ class Server:
         self._enable_mcp = enable_mcp
 
         if enable_mcp:
-            from universal_tool_server.mcp import create_mcp_router
+            from langchain_tool_server.mcp import create_mcp_router
 
             mcp_router = create_mcp_router(self.tool_handler)
             self.app.include_router(mcp_router, prefix="/mcp")

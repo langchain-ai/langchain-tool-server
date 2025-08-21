@@ -1,14 +1,14 @@
-"""Example of using the async client to call universal-tool-server with auth."""
+"""Example of using the async client to call langchain-tool-server with auth."""
 
 import asyncio
 
-from universal_tool_client import get_async_client
+from langchain_tool_client import get_async_client
 
 
 async def main() -> None:
     if len(sys.argv) < 2:
         print(
-            "Usage: uv run client.py url of universal-tool-server  (i.e. http://localhost:8080/)>"
+            "Usage: uv run client.py url of langchain-tool-server  (i.e. http://localhost:8080/)>"
         )
         sys.exit(1)
 

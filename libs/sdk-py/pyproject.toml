@@ -1,7 +1,7 @@
 [project]
-name = "universal-tool-client"
+name = "langchain-tool-client"
 version = "0.0.2"
-description = "Universal Tool Client SDK (Python)"
+description = "LangChain Tool Client SDK (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -22,7 +22,7 @@ test = [
 ]
 
 [project.urls]
-repository = "https://github.com/langchain-ai/universal-tool-server"
+repository = "https://github.com/langchain-ai/langchain-tool-server"
 
 
 [tool.pytest.ini_options]
