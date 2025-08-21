@@ -6,9 +6,9 @@ from typing import Annotated, Generator, Optional
 import pytest
 from fastapi import FastAPI
 from httpx import HTTPStatusError
+from langchain_tool_client import SyncClient
 from starlette.authentication import BaseUser
 from starlette.requests import Request
-from langchain_tool_client import SyncClient
 
 from langchain_tool_server import Server
 from langchain_tool_server._version import __version__
