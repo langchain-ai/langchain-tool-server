@@ -49,7 +49,7 @@ class MCPStreamableHandler:
             "result": result
         }
         
-        headers = {}
+        headers = {"Content-Type": "application/json"}
         if session:
             headers["Mcp-Session-Id"] = session.session_id
             
@@ -66,7 +66,7 @@ class MCPStreamableHandler:
             }
         }
         
-        headers = {}
+        headers = {"Content-Type": "application/json"}
         if session:
             headers["Mcp-Session-Id"] = session.session_id
             
@@ -180,6 +180,27 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
     router = APIRouter()
     handler = MCPStreamableHandler(tool_handler)
 
+    @router.get("/")
+    async def mcp_get_handler(request: Request):
+        """Handle GET requests for session introspection."""
+        from fastapi.responses import Response
+        session_id = request.headers.get("mcp-session-id")
+        if session_id and session_id in handler.sessions:
+            # Session exists, return 200 with session info
+            return Response(status_code=200, headers={"Mcp-Session-Id": session_id})
+        else:
+            # Session doesn't exist, return 404
+            return Response(status_code=404)
+
+    @router.delete("/")
+    async def mcp_delete_handler(request: Request):
+        """Handle DELETE requests for session termination."""
+        from fastapi.responses import Response
+        session_id = request.headers.get("mcp-session-id")
+        if session_id and session_id in handler.sessions:
+            del handler.sessions[session_id]
+        return Response(status_code=204)
+
     @router.post("/")
     async def mcp_streamable_handler(request: Request) -> JSONResponse:
         """Single endpoint for all MCP streamable HTTP communication."""
@@ -194,7 +215,7 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
                     "code": -32700,
                     "message": "Parse error"
                 }
-            }, status_code=400)
+            }, status_code=400, headers={"Content-Type": "application/json"})
         
         # Get or create session
         session_id = request.headers.get("mcp-session-id")
@@ -209,8 +230,9 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
             
         elif method == "notifications/initialized":
             # No response needed for notifications in streamable HTTP
+            from fastapi.responses import Response
             headers = {"Mcp-Session-Id": session.session_id} if session else {}
-            return JSONResponse({"jsonrpc": "2.0"}, headers=headers)
+            return Response(status_code=204, headers=headers)
             
         elif method == "tools/list":
             return await handler.handle_tools_list(session, body)
@@ -227,8 +249,3 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
             )
     
     return router
-
-
-def create_mcp_app(tool_handler: ToolHandler) -> APIRouter:
-    """Create MCP router for backward compatibility."""
-    return create_mcp_router(tool_handler)

@@ -22,9 +22,9 @@ async def main():
         async with ClientSession(streams[0], streams[1]) as session:
             await session.initialize()
             tools = await session.list_tools()
-            print(tools)
+            print(f'Tools: {tools}')
             result = await session.call_tool("echo", {"msg": "Hello, world!"})
-            print(result)
+            print(f'Result from tool call: {result}')
 
 
 if __name__ == "__main__":
