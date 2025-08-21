@@ -293,7 +293,7 @@ def get_usage_examples() -> str:
     """Return usage examples for the command line interface."""
     examples = """
 Examples:
-  # Connect to a Universal Tool Server with default settings
+  # Connect to a LangChain Tool Server with default settings
   o2mcp --url http://localhost:8000
 
   # Connect with authentication headers
@@ -330,7 +330,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--url", type=str, help="URL of the Universal Tool Server (required)"
+        "--url", type=str, help="URL of the LangChain Tool Server (required)"
     )
     parser.add_argument(
         "--headers",

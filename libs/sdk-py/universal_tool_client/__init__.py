@@ -37,7 +37,7 @@ def _get_headers(custom_headers: Optional[dict[str, str]]) -> dict[str, str]:
     """Combine api_key and custom user-provided headers."""
     custom_headers = custom_headers or {}
     headers = {
-        "User-Agent": f"universal-tool-sdk-py/{__version__}",
+        "User-Agent": f"langchain-tool-sdk-py/{__version__}",
         **custom_headers,
     }
     return headers
