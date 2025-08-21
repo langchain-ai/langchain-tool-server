@@ -17,7 +17,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from jsonschema_rs import validator_for
 from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
-from langchain_core.tools import tool as tool_decorator
 from langchain_core.utils.function_calling import convert_to_openai_function
 from pydantic import BaseModel, Field, TypeAdapter
 from typing_extensions import NotRequired, TypedDict
@@ -222,9 +221,9 @@ class ToolHandler:
 
     def _auth_hook(self, tool: RegisteredTool, tool_id: str) -> None:
         """Auth hook that runs before tool execution.
-        
+
         For now, just prints out auth metadata if present.
-        
+
         Args:
             tool: The registered tool being executed.
             tool_id: The ID of the tool being called.
@@ -234,7 +233,9 @@ class ToolHandler:
             auth = metadata["auth"]
             provider = auth.get("provider")
             scopes = auth.get("scopes", [])
-            print(f"Auth required for tool {tool_id} - Provider: {provider}, Scopes: {scopes}")
+            print(
+                f"Auth required for tool {tool_id} - Provider: {provider}, Scopes: {scopes}"
+            )
         else:
             print(f"No auth metadata for tool {tool_id}")
 
@@ -255,7 +256,7 @@ class ToolHandler:
         """
         if not isinstance(tool, BaseTool):
             # Try to get the function name for a better error message
-            func_name = getattr(tool, '__name__', 'unknown')
+            func_name = getattr(tool, "__name__", "unknown")
             raise TypeError(
                 f"Function '{func_name}' must be decorated with @tool decorator. "
                 f"Got {type(tool)}.\n"
@@ -393,7 +394,7 @@ class ToolHandler:
             # Update the injected arguments post-validation
             args.update(injected_arguments)
             self._auth_hook(tool, tool_id)
-            
+
             tool_output = await fn(args)
         else:
             # This is an internal error
