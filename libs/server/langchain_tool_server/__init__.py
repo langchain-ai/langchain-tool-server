@@ -87,17 +87,15 @@ class Server:
         tool, 
         *, 
         permissions: list[str] | None = None,
-        version: Union[int, str, Tuple[int, int, int]] = (1, 0, 0),
     ) -> None:
         """Add a LangChain tool to the server.
         
         Args:
             tool: A BaseTool instance (created with @tool decorator).
             permissions: Permissions required to call the tool.
-            version: Version of the tool.
         """
         logger.info(f"Registering tool: {tool.name}")
-        self.tool_handler.add(tool, permissions=permissions, version=version)
+        self.tool_handler.add(tool, permissions=permissions)
 
     def add_tools(self, *tools) -> None:
         """Add multiple LangChain tools at once.
