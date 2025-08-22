@@ -131,6 +131,106 @@ class Server:
             on_error=on_auth_error,
         )
 
+    @classmethod
+    def from_toolkit(cls, toolkit_dir: str = ".", **kwargs) -> "Server":
+        """Create server from toolkit directory.
+        
+        Args:
+            toolkit_dir: Path to toolkit directory (default: current directory)
+            **kwargs: Additional arguments passed to Server constructor
+            
+        Returns:
+            Server instance with toolkit tools registered
+            
+        Raises:
+            ValueError: If no toolkit package found or TOOLS registry missing
+        """
+        import importlib.util
+        import sys
+        from pathlib import Path
+        
+        toolkit_path = Path(toolkit_dir).resolve()
+        
+        # Find package directory (has __init__.py and is not hidden/cache)
+        package_dirs = [
+            d for d in toolkit_path.iterdir() 
+            if d.is_dir() 
+            and (d / "__init__.py").exists() 
+            and not d.name.startswith('.')
+            and d.name not in {'__pycache__', 'node_modules', '.git', '.venv', 'venv', 'env'}
+        ]
+        
+        if not package_dirs:
+            raise ValueError(f"No toolkit package found in {toolkit_path}")
+            
+        package_dir = package_dirs[0]
+        package_name = package_dir.name
+        
+        logger.info(f"Loading toolkit: {package_name}")
+        
+        try:
+            # Import toolkit package
+            spec = importlib.util.spec_from_file_location(
+                package_name, 
+                package_dir / "__init__.py"
+            )
+            
+            if not spec or not spec.loader:
+                raise ValueError(f"Could not load package {package_name}")
+            
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[package_name] = module
+            
+            # Load tools submodule first (needed for relative imports)
+            tools_init = package_dir / "tools" / "__init__.py"
+            if tools_init.exists():
+                tools_spec = importlib.util.spec_from_file_location(
+                    f"{package_name}.tools",
+                    tools_init
+                )
+                if tools_spec and tools_spec.loader:
+                    tools_module = importlib.util.module_from_spec(tools_spec)
+                    sys.modules[f"{package_name}.tools"] = tools_module
+                    
+                    # Load individual tool modules
+                    tools_dir = package_dir / "tools"
+                    for py_file in tools_dir.glob("*.py"):
+                        if py_file.name.startswith("__"):
+                            continue
+                        tool_spec = importlib.util.spec_from_file_location(
+                            f"{package_name}.tools.{py_file.stem}",
+                            py_file
+                        )
+                        if tool_spec and tool_spec.loader:
+                            tool_module = importlib.util.module_from_spec(tool_spec)
+                            sys.modules[f"{package_name}.tools.{py_file.stem}"] = tool_module
+                            tool_spec.loader.exec_module(tool_module)
+                    
+                    # Now load the tools __init__.py
+                    tools_spec.loader.exec_module(tools_module)
+            
+            # Execute main package module
+            spec.loader.exec_module(module)
+            
+            # Get TOOLS registry
+            if not hasattr(module, 'TOOLS'):
+                raise ValueError(f"Package {package_name} does not export TOOLS registry")
+            
+            tools = module.TOOLS
+            if not isinstance(tools, list):
+                raise ValueError(f"TOOLS must be a list, got {type(tools)}")
+            
+            # Create server and register tools
+            server = cls(**kwargs)
+            for tool in tools:
+                server.add_tool(tool)
+                
+            logger.info(f"Registered {len(tools)} tools from {package_name}")
+            return server
+            
+        except Exception as e:
+            raise ValueError(f"Error loading toolkit: {e}") from e
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI Application"""
         return await self.app.__call__(scope, receive, send)
