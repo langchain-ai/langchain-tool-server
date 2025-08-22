@@ -42,6 +42,13 @@ class Tool:
             except ImportError:
                 raise RuntimeError(f"Tool '{self.name}' requires auth but langchain-auth is not installed")
             except Exception as e:
+                print(f"TEMP DEBUG - Full auth error details:")
+                print(f"  Tool: {self.name}")
+                print(f"  Provider: {self.auth_provider}")
+                print(f"  Scopes: {self.scopes}")
+                print(f"  Exception type: {type(e)}")
+                print(f"  Exception message: {e}")
+                print(f"  Exception args: {e.args}")
                 raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}")
         else:
             print(f"No auth required for tool '{self.name}'")

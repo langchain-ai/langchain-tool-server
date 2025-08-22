@@ -162,25 +162,6 @@ class ToolHandler:
         self.catalog: Dict[str, RegisteredTool] = {}
         self.auth_enabled = False
 
-    def _auth_hook(self, tool: RegisteredTool, tool_id: str) -> None:
-        """Auth hook that runs before tool execution.
-
-        For now, just prints out auth metadata if present.
-
-        Args:
-            tool: The registered tool being executed.
-            tool_id: The ID of the tool being called.
-        """
-        metadata = tool.get("metadata")
-        if metadata and "auth" in metadata:
-            auth = metadata["auth"]
-            provider = auth.get("provider")
-            scopes = auth.get("scopes", [])
-            print(
-                f"Auth required for tool {tool_id} - Provider: {provider}, Scopes: {scopes}"
-            )
-        else:
-            print(f"No auth metadata for tool {tool_id}")
 
     def add(
         self,
