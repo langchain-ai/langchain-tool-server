@@ -12,6 +12,9 @@ dependencies = [
     "orjson>=3.10.15",
     "pydantic>=2.7.2",
     "structlog>=20.1.0",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
 ]
 
 [dependency-groups]
