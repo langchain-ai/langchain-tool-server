@@ -21,7 +21,6 @@ from langchain_tool_server.tools import (
     create_tools_router,
     validation_exception_handler,
 )
-from langchain_tool_server.database import Database
 
 T = TypeVar("T", bound=Callable)
 
@@ -40,48 +39,21 @@ class Server:
     """LangChain tool server."""
 
     def __init__(
-        self, 
-        *, 
-        lifespan: Lifespan | None = None, 
-        enable_mcp: bool = False,
-        database_url: str | None = None
+        self, *, lifespan: Lifespan | None = None, enable_mcp: bool = False
     ) -> None:
-        """Initialize the server.
-        
-        Args:
-            lifespan: FastAPI lifespan context manager
-            enable_mcp: Enable Model Context Protocol endpoints
-            database_url: PostgreSQL connection URL for persistence
-        """
+        """Initialize the server."""
 
         @asynccontextmanager
         async def full_lifespan(app: FastAPI):
             """A lifespan event that is called when the server starts."""
             print(SPLASH)
-            
-            # Connect to database if URL provided
-            if self.database:
-                await self.database.connect()
-                logger.info("Connected to database")
-                # Load existing tools from database
-                await self.tool_handler.load_tools_from_database()
-                logger.info("Loaded tools from database")
-            
             # yield whatever is inside the context manager
             if lifespan:
                 async with lifespan(app) as stateful:
                     yield stateful
             else:
                 yield
-            
-            # Disconnect from database
-            if self.database:
-                await self.database.disconnect()
-                logger.info("Disconnected from database")
 
-        # Initialize database if URL provided
-        self.database = Database(database_url) if database_url else None
-        
         self.app = FastAPI(
             version=__version__,
             lifespan=full_lifespan,
@@ -92,17 +64,11 @@ class Server:
         self.app.exception_handler(RequestValidationError)(validation_exception_handler)
         # Routes that go under `/`
         self.app.include_router(root.router)
-        # Create a tool handler with database if available
-        self.tool_handler = ToolHandler(database=self.database)
+        # Create a tool handler
+        self.tool_handler = ToolHandler()
         # Routes that go under `/tools`
         router = create_tools_router(self.tool_handler)
         self.app.include_router(router, prefix="/tools")
-        
-        # Add version management routes if database is enabled
-        if self.database:
-            from langchain_tool_server.version_routes import create_version_router
-            version_router = create_version_router(self.database)
-            self.app.include_router(version_router, prefix="/versions")
 
         self._auth = Auth()
         # Also create the tool handler.
