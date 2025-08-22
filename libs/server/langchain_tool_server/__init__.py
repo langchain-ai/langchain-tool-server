@@ -21,6 +21,7 @@ from langchain_tool_server.tools import (
     create_tools_router,
     validation_exception_handler,
 )
+from langchain_tool_server.tool import tool
 
 T = TypeVar("T", bound=Callable)
 
@@ -236,4 +237,4 @@ class Server:
         return await self.app.__call__(scope, receive, send)
 
 
-__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "prebuilts"]
+__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "tool"]

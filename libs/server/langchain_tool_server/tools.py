@@ -7,7 +7,6 @@ from typing import (
     Literal,
     Union,
     cast,
-    get_type_hints,
 )
 
 import structlog
@@ -15,11 +14,10 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from jsonschema_rs import validator_for
-from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
-from langchain_core.utils.function_calling import convert_to_openai_function
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 from typing_extensions import NotRequired, TypedDict
+
+from langchain_tool_server.tool import Tool
 
 
 class RegisteredTool(TypedDict):
@@ -35,19 +33,12 @@ class RegisteredTool(TypedDict):
     """Input schema of the tool."""
     output_schema: Dict[str, Any]
     """Output schema of the tool."""
-    fn: Callable[[Dict[str, Any]], Awaitable[Any]]
+    fn: Callable
     """Function to call the tool."""
     permissions: set[str]
     """Scopes required to call the tool.
 
     If empty, not permissions are required and the tool is considered to be public.
-    """
-    accepts: list[tuple[str, Any]]
-    """List of run time arguments that the fn accepts.
-
-    For example, a signature like def foo(x: int, request: Request) -> str:`,
-
-    would have an entry in the `accepts` list as ("request", Request).
     """
     metadata: NotRequired[Dict[str, Any]]
     """Optional metadata associated with the tool."""
@@ -58,12 +49,6 @@ def _is_allowed(
 ) -> bool:
     """Check if the request has required permissions to see / use the tool."""
     required_permissions = tool["permissions"]
-
-    # If tool requests Request object, but one is not provided, then the tool is not
-    # allowed.
-    for _, type_ in tool["accepts"]:
-        if type_ is Request and request is None:
-            return False
 
     if not auth_enabled or not required_permissions:
         # Used to avoid request.auth attribute access raising an assertion errors
@@ -199,58 +184,38 @@ class ToolHandler:
 
     def add(
         self,
-        tool: BaseTool,
+        tool: Tool,
         *,
         permissions: list[str] | None = None,
-        # Default to version 1.0.0
-        version: Union[int, str, tuple[int, int, int]] = (1, 0, 0),
     ) -> None:
         """Register a tool in the catalog.
 
         Args:
-            tool: A BaseTool instance (created with @tool decorator).
+            tool: A Tool instance (created with @tool decorator).
             permissions: Permissions required to call the tool.
-            version: Version of the tool.
         """
-        if not isinstance(tool, BaseTool):
+        if not isinstance(tool, Tool):
             # Try to get the function name for a better error message
             func_name = getattr(tool, "__name__", "unknown")
             raise TypeError(
                 f"Function '{func_name}' must be decorated with @tool decorator. "
                 f"Got {type(tool)}.\n"
                 f"Change:\n"
-                f"  async def {func_name}(...):\n"
+                f"  def {func_name}(...):\n"
                 f"To:\n"
                 f"  @tool\n"
-                f"  async def {func_name}(...):"
+                f"  def {func_name}(...):"
             )
-
-        from pydantic import BaseModel
-
-        if not issubclass(tool.args_schema, BaseModel):
-            raise NotImplementedError(
-                "Expected args_schema to be a Pydantic model. "
-                f"Got {type(tool.args_schema)}."
-                "This is not yet supported."
-            )
-
-        accepts = []
-        for name, field in tool.args_schema.model_fields.items():
-            if field.annotation is Request:
-                accepts.append((name, Request))
-
-        output_schema = get_output_schema(tool)
 
         registered_tool = {
             "id": tool.name,
             "name": tool.name,
             "description": tool.description,
-            "input_schema": convert_to_openai_function(tool)["parameters"],
-            "output_schema": output_schema,
-            "fn": cast(Callable[[Dict[str, Any]], Awaitable[Any]], tool.ainvoke),
+            "input_schema": {},  # Simple empty schema for now
+            "output_schema": {},  # Simple empty schema for now
+            "fn": tool,
             "permissions": cast(set[str], set(permissions or [])),
-            "accepts": accepts,
-            "metadata": tool.metadata,
+            "metadata": {},
         }
 
         if registered_tool["id"] in self.catalog:
@@ -282,33 +247,14 @@ class ToolHandler:
                 detail="Tool either does not exist or insufficient permissions",
             )
 
-        # Validate and parse the payload according to the tool's input schema.
+        # Call the tool
         fn = tool["fn"]
+        
+        self._auth_hook(tool, tool_id)
 
-        injected_arguments = {}
-
-        accepts = tool["accepts"]
-
-        for name, field in accepts:
-            if field is Request:
-                injected_arguments[name] = request
-
-        if isinstance(fn, Callable):
-            payload_schema_ = tool["input_schema"]
-            validator = validator_for(payload_schema_)
-            if not validator.is_valid(args):
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Invalid payload for tool call to tool {tool_id} "
-                        f"with args {args} and schema {payload_schema_}",
-                    ),
-                )
-            # Update the injected arguments post-validation
-            args.update(injected_arguments)
-            self._auth_hook(tool, tool_id)
-
-            tool_output = await fn(args)
+        if isinstance(fn, Tool):
+            # Call our custom Tool instance
+            tool_output = await fn(**args)
         else:
             # This is an internal error
             raise AssertionError(f"Invalid tool implementation: {type(fn)}")
@@ -372,7 +318,7 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
     return router
 
 
-class InjectedRequest(InjectedToolArg):
+class InjectedRequest:
     """Annotation for injecting the starlette request object.
 
     Example:
@@ -393,36 +339,6 @@ class InjectedRequest(InjectedToolArg):
 
 
 logger = structlog.getLogger(__name__)
-
-
-def get_output_schema(tool: BaseTool) -> dict:
-    """Get the output schema."""
-    try:
-        if isinstance(tool, StructuredTool):
-            if hasattr(tool, "coroutine") and tool.coroutine is not None:
-                hints = get_type_hints(tool.coroutine)
-            elif hasattr(tool, "func") and tool.func is not None:
-                hints = get_type_hints(tool.func)
-            else:
-                raise ValueError(f"Invalid tool definition {tool}")
-        elif isinstance(tool, BaseTool):
-            hints = get_type_hints(tool._run)
-        else:
-            raise ValueError(
-                f"Invalid tool definition {tool}. Expected a tool that was created "
-                f"using the @tool decorator or an instance of StructuredTool or BaseTool"
-            )
-
-        if "return" not in hints:
-            return {}  # Any type
-
-        return_type = TypeAdapter(hints["return"])
-        json_schema = return_type.json_schema()
-        return json_schema
-    except Exception as e:
-        logger.aerror(f"Error getting output schema: {e} for tool {tool}")
-        # Generate a schema for any type
-        return {}
 
 
 async def validation_exception_handler(
