@@ -455,7 +455,7 @@ test = [
 
 [[package]]
 name = "langchain-tool-server"
-version = "0.0.5"
+version = "0.0.6"
 source = { directory = "../libs/server" }
 dependencies = [
     { name = "fastapi" },

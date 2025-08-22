@@ -112,17 +112,14 @@ class MCPStreamableHandler:
         for tool in tools:
             tool_name = tool["name"]
             if tool_name not in seen_names:
-                # Check if this is the latest version
-                if tool_name in self.tool_handler.latest_version:
-                    if self.tool_handler.latest_version[tool_name]["id"] == tool["id"]:
-                        tools_list.append(
-                            {
-                                "name": tool_name,
-                                "description": tool["description"],
-                                "inputSchema": tool["input_schema"],
-                            }
-                        )
-                        seen_names.add(tool_name)
+                tools_list.append(
+                    {
+                        "name": tool_name,
+                        "description": tool["description"],
+                        "inputSchema": tool["input_schema"],
+                    }
+                )
+                seen_names.add(tool_name)
 
         result = {"tools": tools_list}
         return self.create_response(body.get("id"), result, session)
