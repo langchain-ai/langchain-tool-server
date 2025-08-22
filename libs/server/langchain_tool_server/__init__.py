@@ -94,8 +94,9 @@ class Server:
             tool: A BaseTool instance (created with @tool decorator).
             permissions: Permissions required to call the tool.
         """
-        logger.info(f"Registering tool: {tool.name}")
+        # Let ToolHandler.add() do the validation - it has better error messages
         self.tool_handler.add(tool, permissions=permissions)
+        logger.info(f"Registered tool: {tool.name}")
 
     def add_tools(self, *tools) -> None:
         """Add multiple LangChain tools at once.
@@ -104,8 +105,7 @@ class Server:
             tools: BaseTool instances (created with @tool decorator).
         """
         for tool in tools:
-            logger.info(f"Registering tool: {tool.name}")
-            self.tool_handler.add(tool)
+            self.add_tool(tool)
 
     def add_auth(self, auth: Auth) -> None:
         """Add an authentication handler to the server."""
@@ -228,8 +228,8 @@ class Server:
             logger.info(f"Registered {len(tools)} tools from {package_name}")
             return server
             
-        except Exception as e:
-            raise ValueError(f"Error loading toolkit: {e}") from e
+        except (ImportError, ModuleNotFoundError) as e:
+            raise ValueError(f"Error importing toolkit: {e}") from e
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI Application"""
