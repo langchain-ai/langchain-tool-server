@@ -1,5 +1,6 @@
 """Custom tool decorator and base class."""
 
+import os
 from typing import Any, Callable, Optional, List
 
 
@@ -18,17 +19,37 @@ class Tool:
         self.auth_provider = auth_provider
         self.scopes = scopes or []
     
-    def _auth_hook(self) -> None:
+    async def _auth_hook(self) -> None:
         """Auth hook that runs before tool execution."""
         if self.auth_provider:
             print(f"Auth required for tool '{self.name}' - Provider: {self.auth_provider}, Scopes: {self.scopes}")
+            
+            try:
+                from langchain_auth import Client
+
+                api_key = os.getenv("LANGSMITH_API_KEY")
+                if not api_key:
+                    raise RuntimeError(f"Tool '{self.name}' requires auth but LANGSMITH_API_KEY environment variable not set")
+                
+                client = Client(api_key=api_key)
+                auth_result = await client.authenticate(
+                    provider=self.auth_provider,
+                    scopes=self.scopes,
+                    user_id="TODO_HOW_SHOULD_USER_BE_CONFIGURED"
+                )
+                print(f"Authentication successful for tool '{self.name}' - Token obtained {auth_result.token}")
+                
+            except ImportError:
+                raise RuntimeError(f"Tool '{self.name}' requires auth but langchain-auth is not installed")
+            except Exception as e:
+                raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}")
         else:
             print(f"No auth required for tool '{self.name}'")
     
     async def __call__(self, *args, **kwargs) -> Any:
         """Call the tool function."""
         # Run auth hook before execution
-        self._auth_hook()
+        await self._auth_hook()
         
         if hasattr(self.func, '__call__'):
             result = self.func(*args, **kwargs)

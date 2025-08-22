@@ -10,6 +10,7 @@ dependencies = [
     "orjson>=3.10.15",
     "pydantic>=2.7.2",
     "structlog>=20.1.0",
+    "langchain-auth",
 ]
 
 [dependency-groups]
