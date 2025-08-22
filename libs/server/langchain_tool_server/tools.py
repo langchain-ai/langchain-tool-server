@@ -249,11 +249,9 @@ class ToolHandler:
 
         # Call the tool
         fn = tool["fn"]
-        
-        self._auth_hook(tool, tool_id)
 
         if isinstance(fn, Tool):
-            # Call our custom Tool instance
+            # Call our custom Tool instance (it handles auth hook internally)
             tool_output = await fn(**args)
         else:
             # This is an internal error
