@@ -53,32 +53,27 @@ async def authenticate(authorization: str) -> dict:
     return api_key_to_user[api_key]
 
 
-# Define tools
+# Define tools using @tool decorator from langchain_core
+from langchain_core.tools import tool
 
-@app.add_tool(permissions=["group1"])
+@tool
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
 
-
-# Tool that has access to the request object
-@app.add_tool(permissions=["authenticated"])
+@tool
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
-    """Get the user identity."""
+    """Get the user identity.""" 
     return request.user.identity
 
-
-# You can also expose existing LangChain tools!
-from langchain_core.tools import tool
-
-
-@tool()
+@tool
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
-
-# Add an existing LangChain tool to the server with permissions!
+# Register all tools with the server
+app.add_tool(echo, permissions=["group1"])
+app.add_tool(who_am_i, permissions=["authenticated"]) 
 app.add_tool(say_hello, permissions=["group2"])
 ```
 
@@ -135,25 +130,25 @@ from langchain_tool_client import get_sync_client
 
 ### Using Existing LangChain Tools
 
-If you have existing LangChain tools, you can expose them via the API by using the `Server.tool`
+If you have existing LangChain tools, you can expose them via the API by using the `add_tool`
 method which will add the tool to the server.
 
 This also gives you the option to add Authentication to an existing LangChain tool.
 
 ```python
-from open_tool_server import Server
+from langchain_tool_server import Server
 from langchain_core.tools import tool
 
 app = Server()
 
 # Say you have some existing langchain tool
-@tool()
+@tool
 async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
 # This is how you expose it via the API
-app.tool(
+app.add_tool(
     say_hello,
     # You can include permissions if you're setting up Auth
     permissions=["group2"]
@@ -210,14 +205,16 @@ You can enable support for the MCP SSE protocol by passing `enable_mcp=True` to 
 
 ```python
 from langchain_tool_server import Server
+from langchain_core.tools import tool
 
 app = Server(enable_mcp=True)
 
-
-@app.add_tool()
+@tool
 async def echo(msg: str) -> str:
     """Echo a message."""
     return msg + "!"
+
+app.add_tool(echo)
 ```
 
 This will mount an MCP SSE app at /mcp/sse. You can use the MCP client to connect to the server.
@@ -249,10 +246,14 @@ async def main() -> None:
 A tool is a function that can be called by the client. It can be a simple function or a coroutine. The function signature should have type hints. The server will use these type hints to validate the input and output of the tool.
 
 ```python
-@app.add_tool()
+from langchain_core.tools import tool
+
+@tool
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
+
+app.add_tool(add)
 ```
 
 #### Permissions
@@ -260,10 +261,14 @@ async def add(x: int, y: int) -> int:
 You can specify `permissions` for a tool. The client must have the required permissions to call the tool. If the client does not have the required permissions, the server will return a 403 Forbidden error.
 
 ```python
-@app.add_tool(permissions=["group1"])
+from langchain_core.tools import tool
+
+@tool
 async def add(x: int, y: int) -> int:
     """Add two numbers."""
     return x + y
+
+app.add_tool(add, permissions=["group1"])
 ```
 
 A client must have **all** the required permissions to call the tool rather than a subset of the permissions.
@@ -274,16 +279,18 @@ A tool can request access to Starlette's `Request` object by using the `Injected
 
 ```python
 from typing import Annotated
+from langchain_core.tools import tool
 from langchain_tool_server import InjectedRequest
 from starlette.requests import Request
 
-
-@app.add_tool(permissions=["group1"])
+@tool
 async def who_am_i(request: Annotated[Request, InjectedRequest]) -> str:
     """Return the user's identity"""
     # The `user` attribute can be used to retrieve the user object.
     # This object corresponds to the return value of the authentication function.
     return request.user.identity
+
+app.add_tool(who_am_i, permissions=["group1"])
 ```
 
 
