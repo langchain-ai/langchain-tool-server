@@ -192,8 +192,8 @@ class ToolHandler:
             "id": tool.name,
             "name": tool.name,
             "description": tool.description,
-            "input_schema": {},  # Simple empty schema for now
-            "output_schema": {},  # Simple empty schema for now
+            "input_schema": tool.input_schema,
+            "output_schema": tool.output_schema,
             "fn": tool,
             "permissions": cast(set[str], set(permissions or [])),
             "metadata": {},
