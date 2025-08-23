@@ -2,6 +2,9 @@
 
 import os
 from typing import Any, Callable, Optional, List
+import structlog
+
+logger = structlog.getLogger(__name__)
 
 
 class Tool:
@@ -19,45 +22,57 @@ class Tool:
         self.auth_provider = auth_provider
         self.scopes = scopes or []
     
-    async def _auth_hook(self) -> None:
-        """Auth hook that runs before tool execution."""
-        if self.auth_provider:
-            print(f"Auth required for tool '{self.name}' - Provider: {self.auth_provider}, Scopes: {self.scopes}")
-            
-            try:
-                from langchain_auth import Client
+    async def _auth_hook(self):
+        """Auth hook that runs before tool execution.
+        
+        Returns:
+            None if no auth required or auth successful
+            Dict with auth_required=True and auth_url if auth needed
+        """
+        if not self.auth_provider:
+            return None
+        
+        logger.info("Auth required for tool", tool=self.name, provider=self.auth_provider, scopes=self.scopes)
+        try:
+            from langchain_auth import Client
 
-                api_key = os.getenv("LANGSMITH_API_KEY")
-                if not api_key:
-                    raise RuntimeError(f"Tool '{self.name}' requires auth but LANGSMITH_API_KEY environment variable not set")
-                
-                client = Client(api_key=api_key)
-                auth_result = await client.authenticate(
-                    provider=self.auth_provider,
-                    scopes=self.scopes,
-                    user_id="TODO_HOW_SHOULD_USER_BE_CONFIGURED"
-                )
-                print(f"Authentication successful for tool '{self.name}' - Token obtained {auth_result.token}")
-                
-            except ImportError:
-                raise RuntimeError(f"Tool '{self.name}' requires auth but langchain-auth is not installed")
-            except Exception as e:
-                print(f"TEMP DEBUG - Full auth error details:")
-                print(f"  Tool: {self.name}")
-                print(f"  Provider: {self.auth_provider}")
-                print(f"  Scopes: {self.scopes}")
-                print(f"  Exception type: {type(e)}")
-                print(f"  Exception message: {e}")
-                print(f"  Exception args: {e.args}")
-                raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}")
-        else:
-            print(f"No auth required for tool '{self.name}'")
+            api_key = os.getenv("LANGSMITH_API_KEY")
+            if not api_key:
+                raise RuntimeError(f"Tool '{self.name}' requires auth but LANGSMITH_API_KEY environment variable not set")
+            
+            client = Client(api_key=api_key)
+            auth_result = await client.authenticate(
+                provider=self.auth_provider,
+                scopes=self.scopes,
+                user_id="TODO_HOW_SHOULD_USER_BE_CONFIGURED"
+            )
+            
+            if auth_result.needs_auth:
+                logger.info("OAuth flow required", tool=self.name, auth_url=auth_result.auth_url)
+                return {
+                    "auth_required": True,
+                    "auth_url": auth_result.auth_url,
+                    "auth_id": getattr(auth_result, 'auth_id', None)
+                }
+            else:
+                logger.info("Authentication successful", tool=self.name)
+                return None
+            
+        except ImportError:
+            raise RuntimeError(f"Tool '{self.name}' requires auth but langchain-auth is not installed")
+        except Exception as e:
+            raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}")
     
     async def __call__(self, *args, **kwargs) -> Any:
         """Call the tool function."""
         # Run auth hook before execution
-        await self._auth_hook()
+        auth_response = await self._auth_hook()
         
+        # If auth is required, return the auth info instead of executing the tool
+        if auth_response and auth_response.get("auth_required"):
+            return auth_response
+        
+        # Auth successful or not required, execute the tool
         if hasattr(self.func, '__call__'):
             result = self.func(*args, **kwargs)
             # Handle both sync and async functions
