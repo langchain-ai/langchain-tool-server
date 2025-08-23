@@ -124,11 +124,15 @@ class MCPStreamableHandler:
         result = {"tools": tools_list}
         return self.create_response(body.get("id"), result, session)
 
-    async def handle_tools_call(self, session: MCPSession, body: dict) -> JSONResponse:
+    async def handle_tools_call(self, session: MCPSession, body: dict, request: Request) -> JSONResponse:
         """Handle tools/call request."""
         params = body.get("params", {})
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
+        # Get user_id from headers instead of params
+        user_id = request.headers.get("X-User-ID")
+        
+        print(f"MCP tools/call: tool={tool_name}, user_id={user_id}, args={arguments}")
 
         if not tool_name:
             return self.create_error(
@@ -141,6 +145,8 @@ class MCPStreamableHandler:
                 "tool_id": tool_name,
                 "input": arguments,
             }
+            if user_id:
+                call_tool_request["user_id"] = user_id
 
             # Execute the tool
             response = await self.tool_handler.call_tool(
@@ -173,7 +179,7 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
     router = APIRouter()
     handler = MCPStreamableHandler(tool_handler)
 
-    @router.get("/")
+    @router.get("")
     async def mcp_get_handler(request: Request):
         """Handle GET requests - SSE not supported, only streamable HTTP."""
         from fastapi.responses import Response
@@ -185,7 +191,7 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
             headers={"Content-Type": "text/plain"},
         )
 
-    @router.delete("/")
+    @router.delete("")
     async def mcp_delete_handler(request: Request):
         """Handle DELETE requests for session termination."""
         from fastapi.responses import Response
@@ -195,7 +201,7 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
             del handler.sessions[session_id]
         return Response(status_code=204)
 
-    @router.post("/")
+    @router.post("")
     async def mcp_streamable_handler(request: Request) -> JSONResponse:
         """Single endpoint for all MCP streamable HTTP communication."""
 
@@ -231,7 +237,7 @@ def create_mcp_router(tool_handler: ToolHandler) -> APIRouter:
             return await handler.handle_tools_list(session, body)
 
         elif method == "tools/call":
-            return await handler.handle_tools_call(session, body)
+            return await handler.handle_tools_call(session, body, request)
 
         else:
             return handler.create_error(

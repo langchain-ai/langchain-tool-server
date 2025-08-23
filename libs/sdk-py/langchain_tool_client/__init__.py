@@ -317,13 +317,18 @@ class AsyncMCPToolsClient:
         """Initialize the MCP client."""
         self.url = url
     
-    async def _create_session_context(self):
+    async def _create_session_context(self, headers: Optional[Dict[str, str]] = None):
         """Create a new MCP session context for each operation."""
         try:
             import mcp.client.streamable_http as streamable_http
             from mcp import ClientSession
             
-            return streamable_http.streamablehttp_client(url=self.url)
+            # Pass custom headers if provided
+            kwargs = {"url": self.url}
+            if headers:
+                kwargs["headers"] = headers
+                
+            return streamable_http.streamablehttp_client(**kwargs)
         except ImportError as e:
             raise ImportError(
                 "To use MCP mode, you must have mcp installed. "
@@ -360,15 +365,18 @@ class AsyncMCPToolsClient:
     ) -> Any:
         """Call a tool via MCP."""
         from mcp import ClientSession
-        async with await self._create_session_context() as streams:
+        
+        # Prepare headers with user_id if provided
+        headers = {}
+        if user_id is not None:
+            headers["X-User-ID"] = user_id
+            
+        async with await self._create_session_context(headers if headers else None) as streams:
             async with ClientSession(streams[0], streams[1]) as session:
                 await session.initialize()
                 
-                # Add user_id to args if provided and tool requires auth
                 if args is None:
                     args = {}
-                if user_id is not None:
-                    args["user_id"] = user_id
                     
                 result = await session.call_tool(tool_id, args)
                 
