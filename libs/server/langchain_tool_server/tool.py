@@ -1,8 +1,10 @@
 """Custom tool decorator and base class."""
 
 import os
+import inspect
 from typing import Any, Callable, Optional, List
 import structlog
+from pydantic import validate_arguments
 
 from langchain_tool_server.context import Context
 
@@ -23,6 +25,47 @@ class Tool:
         self.description = func.__doc__ or ""
         self.auth_provider = auth_provider
         self.scopes = scopes or []
+        
+        # Generate JSON schemas using Pydantic (similar to LangChain Core)
+        self.input_schema = self._generate_input_schema()
+        self.output_schema = self._generate_output_schema()
+    
+    def _generate_input_schema(self) -> dict:
+        """Generate input schema from function signature using Pydantic."""
+        try:
+            # Use Pydantic's validate_arguments to create a model from function signature
+            validated_func = validate_arguments(self.func)
+            model = validated_func.model
+            
+            # Get the JSON schema from the model
+            schema = model.model_json_schema()
+            
+            # Filter out 'context' parameter for authenticated tools
+            if self.auth_provider and 'properties' in schema:
+                schema['properties'].pop('context', None)
+                if 'required' in schema and 'context' in schema['required']:
+                    schema['required'].remove('context')
+            
+            return schema
+        except Exception:
+            # Fallback to basic schema if Pydantic validation fails
+            return {"type": "object", "properties": {}}
+    
+    def _generate_output_schema(self) -> dict:
+        """Generate output schema from function return type using Pydantic."""
+        try:
+            sig = inspect.signature(self.func)
+            return_annotation = sig.return_annotation
+            
+            if return_annotation == inspect.Signature.empty:
+                return {"type": "string"}
+            
+            # Create a simple Pydantic model with the return type
+            from pydantic import create_model
+            OutputModel = create_model('Output', result=(return_annotation, ...))
+            return OutputModel.model_json_schema()['properties']['result']
+        except Exception:
+            return {"type": "string"}
     
     async def _auth_hook(self, user_id: str = None):
         """Auth hook that runs before tool execution.
