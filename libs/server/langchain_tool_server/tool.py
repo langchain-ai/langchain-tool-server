@@ -24,9 +24,12 @@ class Tool:
         self.auth_provider = auth_provider
         self.scopes = scopes or []
     
-    async def _auth_hook(self):
+    async def _auth_hook(self, user_id: str = None):
         """Auth hook that runs before tool execution.
         
+        Args:
+            user_id: User ID for authentication
+            
         Returns:
             None if no auth required or auth successful
             Dict with auth_required=True and auth_url if auth needed
@@ -34,7 +37,10 @@ class Tool:
         if not self.auth_provider:
             return None
         
-        logger.info("Auth required for tool", tool=self.name, provider=self.auth_provider, scopes=self.scopes)
+        if not user_id:
+            raise RuntimeError(f"Tool '{self.name}' requires auth but no user_id provided")
+        
+        logger.info("Auth required for tool", tool=self.name, provider=self.auth_provider, scopes=self.scopes, user_id=user_id)
         try:
             from langchain_auth import Client
 
@@ -46,7 +52,7 @@ class Tool:
             auth_result = await client.authenticate(
                 provider=self.auth_provider,
                 scopes=self.scopes,
-                user_id="TODO_HOW_SHOULD_USER_BE_CONFIGURED"
+                user_id=user_id
             )
             
             if auth_result.needs_auth:
@@ -67,10 +73,10 @@ class Tool:
         except Exception as e:
             raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}")
     
-    async def __call__(self, *args, **kwargs) -> Any:
+    async def __call__(self, *args, user_id: str = None, **kwargs) -> Any:
         """Call the tool function."""
         # Run auth hook before execution
-        auth_response = await self._auth_hook()
+        auth_response = await self._auth_hook(user_id=user_id)
         
         # If auth is required, return the auth info instead of executing the tool
         if auth_response and auth_response.get("auth_required"):

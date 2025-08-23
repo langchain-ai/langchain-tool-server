@@ -65,10 +65,10 @@ class CallToolRequest(TypedDict):
     """An unique identifier for the tool to call."""
     input: NotRequired[Dict[str, Any]]
     """The input to pass to the tool."""
-    call_id: NotRequired[str]
+    execution_id: NotRequired[str]
     """Execution ID."""
-    trace_id: NotRequired[str]
-    """Trace ID."""
+    user_id: NotRequired[str]
+    """User ID for tools requiring authentication."""
 
 
 # Not using `class` syntax b/c $schema is not a valid attribute name.
@@ -124,7 +124,7 @@ class ToolException(Exception):
 class CallToolResponse(TypedDict):
     """Response from a tool execution."""
 
-    call_id: str
+    execution_id: str
     """A unique ID for the execution"""
 
     success: bool
@@ -209,7 +209,8 @@ class ToolHandler:
         """Calls a tool by name with the provided payload."""
         tool_id = call_tool_request["tool_id"]
         args = call_tool_request.get("input", {})
-        call_id = call_tool_request.get("call_id", uuid.uuid4())
+        execution_id = call_tool_request.get("execution_id", uuid.uuid4())
+        user_id = call_tool_request.get("user_id")
 
         if tool_id not in self.catalog:
             if self.auth_enabled:
@@ -233,12 +234,13 @@ class ToolHandler:
 
         if isinstance(fn, Tool):
             # Call our custom Tool instance (it handles auth hook internally)
-            tool_output = await fn(**args)
+            # Pass user_id for auth tools
+            tool_output = await fn(user_id=user_id, **args)
         else:
             # This is an internal error
             raise AssertionError(f"Invalid tool implementation: {type(fn)}")
 
-        return {"success": True, "call_id": str(call_id), "value": tool_output}
+        return {"success": True, "execution_id": str(execution_id), "value": tool_output}
 
     async def list_tools(self, request: Request | None) -> list[ToolDefinition]:
         """Lists all available tools in the catalog."""
