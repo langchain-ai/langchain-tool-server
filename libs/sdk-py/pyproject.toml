@@ -1,6 +1,6 @@
 [project]
 name = "langchain-tool-client"
-version = "0.0.2"
+version = "0.0.3"
 description = "LangChain Tool Client SDK (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
