@@ -4,6 +4,8 @@ import os
 from typing import Any, Callable, Optional, List
 import structlog
 
+from langchain_tool_server.context import Context
+
 logger = structlog.getLogger(__name__)
 
 
@@ -56,6 +58,8 @@ class Tool:
                 }
             else:
                 logger.info("Authentication successful", tool=self.name)
+                # Store the token in context for the tool to use
+                self._context = Context(token=auth_result.token)
                 return None
             
         except ImportError:
@@ -74,6 +78,14 @@ class Tool:
         
         # Auth successful or not required, execute the tool
         if hasattr(self.func, '__call__'):
+            # For auth tools, always inject context as first argument
+            if self.auth_provider:
+                if hasattr(self, '_context'):
+                    # Prepend context to args
+                    args = (self._context,) + args
+                else:
+                    raise RuntimeError(f"Tool {self.name} requires auth but no context available")
+            
             result = self.func(*args, **kwargs)
             # Handle both sync and async functions
             if hasattr(result, '__await__'):
@@ -110,6 +122,30 @@ def tool(
         # Validation: if auth_provider is given, scopes must be given with at least one scope
         if auth_provider and (not scopes or len(scopes) == 0):
             raise ValueError(f"Tool '{f.__name__}': If auth_provider is specified, scopes must be provided with at least one scope")
+        
+        # Validation: if auth_provider is given, first parameter must be 'context: Context'
+        if auth_provider:
+            import inspect
+            from typing import get_type_hints
+            
+            sig = inspect.signature(f)
+            params = list(sig.parameters.keys())
+            
+            # Check parameter name
+            if not params or params[0] != 'context':
+                raise ValueError(f"Tool '{f.__name__}': Tools with auth_provider must have 'context' as their first parameter")
+            
+            # Check parameter type annotation
+            try:
+                type_hints = get_type_hints(f)
+                if 'context' in type_hints:
+                    context_type = type_hints['context']
+                    if context_type != Context:
+                        raise ValueError(f"Tool '{f.__name__}': The 'context' parameter must be typed as 'Context', got '{context_type}'")
+                else:
+                    raise ValueError(f"Tool '{f.__name__}': The 'context' parameter must have type annotation 'Context'")
+            except Exception as e:
+                raise ValueError(f"Tool '{f.__name__}': Error validating context parameter type: {e}")
         
         return Tool(f, auth_provider=auth_provider, scopes=scopes)
     

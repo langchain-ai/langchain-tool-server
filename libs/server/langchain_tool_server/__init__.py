@@ -22,6 +22,7 @@ from langchain_tool_server.tools import (
     validation_exception_handler,
 )
 from langchain_tool_server.tool import tool
+from langchain_tool_server.context import Context
 
 T = TypeVar("T", bound=Callable)
 
@@ -237,4 +238,4 @@ class Server:
         return await self.app.__call__(scope, receive, send)
 
 
-__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "tool"]
+__all__ = ["__version__", "Server", "Auth", "InjectedRequest", "tool", "Context"]
