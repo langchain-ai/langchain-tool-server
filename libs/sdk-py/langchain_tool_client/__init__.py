@@ -187,161 +187,66 @@ class AsyncHttpClient:
             raise e
 
 
-class SyncHttpClient:
-    def __init__(self, client: httpx.Client) -> None:
-        self.client = client
-
-    def get(self, path: str, *, params: Optional[QueryParamTypes] = None) -> Any:
-        """Send a GET request."""
-        r = self.client.get(path, params=params)
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            body = r.read().decode()
-            if sys.version_info >= (3, 11):
-                e.add_note(body)
-            else:
-                logger.error(f"Error from langchain-tool-server: {body}", exc_info=e)
-            raise e
-        return _decode_json(r)
-
-    def post(self, path: str, *, json: Optional[dict]) -> Any:
-        """Send a POST request."""
-        if json is not None:
-            headers, content = _encode_json(json)
-        else:
-            headers, content = {}, b""
-        r = self.client.post(path, headers=headers, content=content)
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            body = r.read().decode()
-            if sys.version_info >= (3, 11):
-                e.add_note(body)
-            else:
-                logger.error(f"Error from langchain-tool-server: {body}", exc_info=e)
-            raise e
-        return _decode_json(r)
-
-    def put(self, path: str, *, json: dict) -> Any:
-        """Send a PUT request."""
-        headers, content = _encode_json(json)
-        r = self.client.put(path, headers=headers, content=content)
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            body = r.read().decode()
-            if sys.version_info >= (3, 11):
-                e.add_note(body)
-            else:
-                logger.error(f"Error from langchain-tool-server: {body}", exc_info=e)
-            raise e
-        return _decode_json(r)
-
-    def patch(self, path: str, *, json: dict) -> Any:
-        """Send a PATCH request."""
-        headers, content = _encode_json(json)
-        r = self.client.patch(path, headers=headers, content=content)
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            body = r.read().decode()
-            if sys.version_info >= (3, 11):
-                e.add_note(body)
-            else:
-                logger.error(f"Error from langchain-tool-server: {body}", exc_info=e)
-            raise e
-        return _decode_json(r)
-
-    def delete(self, path: str, *, json: Optional[Any] = None) -> None:
-        """Send a DELETE request."""
-        r = self.client.request("DELETE", path, json=json)
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            body = r.read().decode()
-            if sys.version_info >= (3, 11):
-                e.add_note(body)
-            else:
-                logger.error(f"Error from langchain-tool-server: {body}", exc_info=e)
-            raise e
 
 
 ############
 # PUBLIC API
 
 
-def get_async_client(
-    *,
+def get_client(
     url: Optional[str] = None,
+    *,
+    mcp: bool = True,
     headers: Optional[dict[str, str]] = None,
-    transport: Optional[httpx.AsyncBaseTransport] = None,
-) -> AsyncClient:
-    """Get instance.
+) -> "AsyncClientBase":
+    """Get a client instance.
 
     Args:
         url: The URL of the tool server.
-        headers: Optional custom headers
-        transport: Optional transport to use.
+        mcp: Whether to use MCP protocol (True) or HTTP REST (False). Defaults to True.
+        headers: Optional custom headers (only used for HTTP mode).
 
     Returns:
-        AsyncClient: The top-level client for accessing the tool server.
+        AsyncClientBase: The client for accessing the tool server.
     """
-
     if url is None:
-        url = "http://localhost:2424"
-
-    if transport is None:
+        url = "http://localhost:8000"
+    
+    if mcp:
+        # For MCP, append /mcp to URL if not present
+        mcp_url = url if url.endswith('/mcp') else f"{url}/mcp"
+        return AsyncMCPClient(mcp_url)
+    else:
+        # HTTP mode
         transport = httpx.AsyncHTTPTransport(retries=5)
-
-    client = httpx.AsyncClient(
-        base_url=url,
-        transport=transport,
-        timeout=httpx.Timeout(connect=5, read=300, write=300, pool=5),
-        headers=_get_headers(headers),
-    )
-    return AsyncClient(client)
-
-
-def get_sync_client(
-    *,
-    url: Optional[str] = None,
-    headers: Optional[dict[str, str]] = None,
-    transport: Optional[httpx.AsyncBaseTransport] = None,
-) -> SyncClient:
-    """Get instance.
-
-    Args:
-        url: The URL of the tool server.
-        headers: Optional custom headers
-        transport: Optional transport to use.
-
-    Returns:
-        AsyncClient: The top-level client for accessing the tool server.
-    """
-
-    if url is None:
-        url = "http://localhost:2424"
-
-    if transport is None:
-        transport = httpx.HTTPTransport(retries=5)
-
-    client = httpx.Client(
-        base_url=url,
-        transport=transport,
-        timeout=httpx.Timeout(connect=5, read=300, write=300, pool=5),
-        headers=_get_headers(headers),
-    )
-    return SyncClient(client)
+        client = httpx.AsyncClient(
+            base_url=url,
+            transport=transport,
+            timeout=httpx.Timeout(connect=5, read=300, write=300, pool=5),
+            headers=_get_headers(headers),
+        )
+        return AsyncHTTPClient(client)
 
 
-class AsyncClient:
-    """Top-level client for the tools server."""
+class AsyncClientBase:
+    """Base class for async clients."""
+    
+    async def info(self) -> Any:
+        """Get server info."""
+        raise NotImplementedError
+    
+    async def health(self) -> Any:
+        """Check server health."""
+        raise NotImplementedError
+
+
+class AsyncHTTPClient(AsyncClientBase):
+    """HTTP-based async client."""
 
     def __init__(self, client: httpx.AsyncClient) -> None:
         """Initialize the client."""
         self.http = AsyncHttpClient(client)
-        self.tools = AsyncToolsClient(self.http)
+        self.tools = AsyncHTTPToolsClient(self.http)
 
     async def info(self) -> Any:
         return await self.http.get("/info")
@@ -350,23 +255,32 @@ class AsyncClient:
         return await self.http.get("/health")
 
 
-class SyncClient:
-    """Top-level client for the tools server."""
+class AsyncMCPClient(AsyncClientBase):
+    """MCP-based async client."""
+    
+    def __init__(self, url: str) -> None:
+        """Initialize the MCP client."""
+        self.url = url
+        self.tools = AsyncMCPToolsClient(url)
+    
+    async def info(self) -> Any:
+        # MCP doesn't have info endpoint, return basic info
+        return {"protocol": "mcp", "url": self.url}
+    
+    async def health(self) -> Any:
+        # MCP health check by attempting connection
+        try:
+            from mcp import ClientSession
+            async with await self.tools._create_session_context() as streams:
+                async with ClientSession(streams[0], streams[1]) as session:
+                    await session.initialize()
+                    return {"status": "healthy"}
+        except Exception as e:
+            return {"status": "unhealthy", "error": str(e)}
 
-    def __init__(self, client: httpx.Client) -> None:
-        """Initialize the client."""
-        self.http = SyncHttpClient(client)
-        self.tools = SyncToolsClient(self.http)
 
-    def info(self) -> Any:
-        return self.http.get("/info")
-
-    def health(self) -> Any:
-        return self.http.get("/health")
-
-
-class AsyncToolsClient:
-    """Tools API."""
+class AsyncHTTPToolsClient:
+    """HTTP Tools API."""
 
     def __init__(self, http: AsyncHttpClient) -> None:
         """Initialize the client."""
@@ -381,181 +295,99 @@ class AsyncToolsClient:
         tool_id: str,
         args: Dict[str, Any] | None = None,
         *,
+        user_id: Optional[str] = None,
         call_id: Optional[str] = None,
     ) -> Any:
         """Call a tool."""
         payload = {"tool_id": tool_id}
         if args is not None:
             payload["input"] = args
+        if user_id is not None:
+            payload["user_id"] = user_id
         if call_id is not None:
             payload["call_id"] = call_id
         request = {"request": payload, "$schema": PROTOCOL}
         return await self.http.post("/tools/call", json=request)
 
-    async def as_langchain_tools(
-        self, *, tool_ids: Sequence[str] | None = None
-    ) -> List[BaseTool]:
-        """Load tools from the server.
 
-        Args:
-            tool_ids: If specified, will only load the selected tools.
-                   Otherwise, all tools will be loaded.
-
-        Returns:
-            a list of LangChain tools.
-        """
+class AsyncMCPToolsClient:
+    """MCP Tools API."""
+    
+    def __init__(self, url: str) -> None:
+        """Initialize the MCP client."""
+        self.url = url
+    
+    async def _create_session_context(self):
+        """Create a new MCP session context for each operation."""
         try:
-            from langchain_core.tools import StructuredTool
+            import mcp.client.streamable_http as streamable_http
+            from mcp import ClientSession
+            
+            return streamable_http.streamablehttp_client(url=self.url)
         except ImportError as e:
             raise ImportError(
-                "To use this method, you must have langchain-core installed. "
-                "You can install it with `pip install langchain-core`."
+                "To use MCP mode, you must have mcp installed. "
+                "You can install it with `pip install mcp`."
             ) from e
-
-        available_tools = await self.list()
-
-        available_tools_by_name = {tool["name"]: tool for tool in available_tools}
-
-        if tool_ids is None:
-            tool_ids = list(available_tools_by_name)
-
-        if set(tool_ids) - set(available_tools_by_name):
-            raise ValueError(
-                f"Unknown tool names: {set(tool_ids) - set(available_tools_by_name)}"
-            )
-
-        # The code below will create LangChain style tools by binding
-        # tool metadata and the tool implementation together in a StructuredTool.
-        def create_tool_caller(tool_name_: str) -> Callable[..., Awaitable[Any]]:
-            """Create a tool caller."""
-
-            async def call_tool(**kwargs: Any) -> Any:
-                """Call a tool."""
-                call_tool_result = await self.call(tool_name_, kwargs)
-                if not call_tool_result["success"]:
-                    raise NotImplementedError(
-                        "An error occurred while calling the tool. "
-                        "The client does not yet support error handling."
-                    )
-                return call_tool_result["value"]
-
-            return call_tool
-
-        tools = []
-
-        for tool_id in tool_ids:
-            tool_spec = available_tools_by_name[tool_id]
-
-            tools.append(
-                StructuredTool(
-                    name=tool_spec["name"],
-                    description=tool_spec["description"],
-                    args_schema=tool_spec["input_schema"],
-                    coroutine=create_tool_caller(tool_id),
-                )
-            )
-        return tools
-
-
-class SyncToolsClient:
-    """Tools API."""
-
-    def __init__(self, http: SyncHttpClient) -> None:
-        """Initialize the client."""
-        self.http = http
-
-    def list(self) -> Any:
-        """List tools."""
-        return self.http.get("/tools")
-
-    def call(
+    
+    async def list(self) -> Any:
+        """List tools via MCP."""
+        from mcp import ClientSession
+        async with await self._create_session_context() as streams:
+            async with ClientSession(streams[0], streams[1]) as session:
+                await session.initialize()
+                tools_list = await session.list_tools()
+                
+                # Convert MCP format to our standard format
+                return [
+                    {
+                        "id": tool.name,
+                        "name": tool.name, 
+                        "description": tool.description or "",
+                        "input_schema": tool.inputSchema.model_dump() if tool.inputSchema else {},
+                        "output_schema": {}
+                    }
+                    for tool in tools_list.tools
+                ]
+    
+    async def call(
         self,
         tool_id: str,
         args: Dict[str, Any] | None = None,
         *,
-        call_id: str | None = None,
+        user_id: Optional[str] = None,
+        call_id: Optional[str] = None,
     ) -> Any:
-        """Call a tool."""
-
-        payload = {"tool_id": tool_id}
-        if args is not None:
-            payload["input"] = args
-        if call_id is not None:
-            payload["call_id"] = call_id
-        request = {
-            "$schema": PROTOCOL,
-            "request": payload,
-        }
-        return self.http.post("/tools/call", json=request)
-
-    def as_langchain_tools(
-        self, *, tool_ids: Sequence[str] | None = None
-    ) -> List[BaseTool]:
-        """Load tools from the server.
-
-        Args:
-            tool_ids: If specified, will only load the selected tools.
-                Otherwise, all tools will be loaded.
-
-        Returns:
-            a list of LangChain tools.
-        """
-        try:
-            from langchain_core.tools import StructuredTool
-        except ImportError as e:
-            raise ImportError(
-                "To use this method, you must have langchain-core installed. "
-                "You can install it with `pip install langchain-core`."
-            ) from e
-
-        available_tools = self.list()
-        available_tools_by_name = {tool["name"]: tool for tool in available_tools}
-
-        if tool_ids is None:
-            tool_ids = list(available_tools_by_name)
-
-        if set(tool_ids) - set(available_tools_by_name):
-            raise ValueError(
-                f"Unknown tool names: {set(tool_ids) - set(available_tools_by_name)}"
-            )
-
-        # The code below will create LangChain style tools by binding
-        # tool metadata and the tool implementation together in a StructuredTool.
-
-        def create_tool_caller(tool_id: str) -> Callable[..., Any]:
-            """Create a tool caller."""
-
-            def call_tool(**kwargs: Any) -> Any:
-                """Call a tool."""
-                call_tool_result = self.call(tool_id, kwargs)
-                if not call_tool_result["success"]:
-                    raise NotImplementedError(
-                        "An error occurred while calling the tool. "
-                        "The client does not yet support error handling."
-                    )
-                return call_tool_result["value"]
-
-            return call_tool
-
-        tools = []
-
-        for tool_name in tool_ids:
-            tool_spec = available_tools_by_name[tool_name]
-
-            tools.append(
-                StructuredTool(
-                    name=tool_name,
-                    description=tool_spec["description"],
-                    args_schema=tool_spec["input_schema"],
-                    func=create_tool_caller(tool_name),
-                )
-            )
-        return tools
+        """Call a tool via MCP."""
+        from mcp import ClientSession
+        async with await self._create_session_context() as streams:
+            async with ClientSession(streams[0], streams[1]) as session:
+                await session.initialize()
+                
+                # Add user_id to args if provided and tool requires auth
+                if args is None:
+                    args = {}
+                if user_id is not None:
+                    args["user_id"] = user_id
+                    
+                result = await session.call_tool(tool_id, args)
+                
+                # Convert MCP format to our standard format
+                if result.content:
+                    value = result.content[0].text if result.content[0].text else result.content[0]
+                else:
+                    value = None
+                    
+                return {
+                    "success": not result.isError,
+                    "value": value,
+                    "execution_id": call_id or "mcp-call"
+                }
 
 
 __all__ = [
-    "get_async_client",
-    "get_sync_client",
-    "AsyncClient",
-    "SyncClient",
+    "get_client",
+    "AsyncClientBase", 
+    "AsyncHTTPClient",
+    "AsyncMCPClient",
 ]
