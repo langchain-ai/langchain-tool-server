@@ -19,7 +19,7 @@ async def say_hello() -> str:
     """Say hello."""
     return "Hello"
 
-@tool(auth_provider='gmail', auth_scopes=['gmail.send', 'gmail.read'])
+@tool(auth_provider='gmail', scopes=['gmail.send', 'gmail.read'])
 async def send_email(to: str, subject: str, body: str) -> str:
     """Send an email via Gmail API."""
     return f"Email sent to {to} with subject '{subject}'"
