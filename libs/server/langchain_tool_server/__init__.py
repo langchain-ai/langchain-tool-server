@@ -219,32 +219,6 @@ class Server:
             if not isinstance(tools, list):
                 raise ValueError(f"TOOLS must be a list, got {type(tools)}")
             
-            # Check for optional routes.py file
-            routes_file = package_dir / "routes.py"
-            custom_router = None
-            
-            if routes_file.exists():
-                logger.info(f"Loading custom routes from {package_name}.routes")
-                try:
-                    # Load routes module
-                    routes_spec = importlib.util.spec_from_file_location(
-                        f"{package_name}.routes",
-                        routes_file
-                    )
-                    if routes_spec and routes_spec.loader:
-                        routes_module = importlib.util.module_from_spec(routes_spec)
-                        sys.modules[f"{package_name}.routes"] = routes_module
-                        routes_spec.loader.exec_module(routes_module)
-                        
-                        # Look for 'router' instance in the routes module
-                        if hasattr(routes_module, 'router'):
-                            custom_router = routes_module.router
-                            logger.info(f"Loaded custom routes from {package_name}.routes")
-                        else:
-                            logger.warning(f"routes.py exists but no 'router' instance found")
-                            
-                except Exception as e:
-                    logger.warning(f"Failed to load routes from {package_name}.routes: {e}")
             
             # Check for optional auth.py file
             auth_file = package_dir / "auth.py"
@@ -275,10 +249,6 @@ class Server:
             
             # Create server and register tools
             server = cls(**kwargs)
-            
-            # Add custom routes if found
-            if custom_router:
-                server.app.include_router(custom_router)
             
             # Add auth if found
             if auth_instance:
