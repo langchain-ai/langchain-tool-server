@@ -32,57 +32,25 @@ class Tool:
     
     def _generate_input_schema(self) -> dict:
         """Generate input schema from function signature using Pydantic."""
-        try:
-            # Get actual function parameters to filter against
-            sig = inspect.signature(self.func)
-            real_params = set(sig.parameters.keys())
+        from pydantic import create_model
+        
+        sig = inspect.signature(self.func)
+        
+        # Build fields dict for create_model, excluding context parameter for auth tools
+        fields = {}
+        for name, param in sig.parameters.items():
+            if self.auth_provider and name == 'context':
+                continue
+                
+            # Use parameter annotation and default value
+            annotation = param.annotation if param.annotation != inspect.Parameter.empty else str
+            default_value = param.default if param.default != inspect.Parameter.empty else ...
             
-            # Use Pydantic's validate_arguments to create a model from function signature
-            validated_func = validate_arguments(self.func)
-            model = validated_func.model
-            
-            # Get the JSON schema from the model
-            full_schema = model.model_json_schema()
-            
-            # Extract only the essential parts for a clean schema
-            clean_schema = {
-                "type": "object",
-                "properties": {},
-            }
-            
-            if "properties" in full_schema:
-                for prop_name, prop_schema in full_schema["properties"].items():
-                    # Skip 'context' parameter for authenticated tools
-                    if self.auth_provider and prop_name == 'context':
-                        continue
-                    
-                    # Only include properties that are actual function parameters
-                    if prop_name not in real_params:
-                        continue
-                    
-                    # Extract only basic type info, ignore Pydantic extras
-                    clean_prop = {"type": prop_schema.get("type", "string")}
-                    
-                    if "title" in prop_schema:
-                        clean_prop["title"] = prop_schema["title"]
-                    if "default" in prop_schema:
-                        clean_prop["default"] = prop_schema["default"]
-                        
-                    clean_schema["properties"][prop_name] = clean_prop
-            
-            # Handle required fields (only for real parameters)
-            if "required" in full_schema:
-                required = [
-                    f for f in full_schema["required"] 
-                    if f in real_params and not (self.auth_provider and f == 'context')
-                ]
-                if required:
-                    clean_schema["required"] = required
-            
-            return clean_schema
-        except Exception:
-            # Fallback to basic schema if Pydantic validation fails
-            return {"type": "object", "properties": {}}
+            fields[name] = (annotation, default_value)
+        
+        # Create Pydantic model from filtered fields
+        InputModel = create_model('InputModel', **fields)
+        return InputModel.model_json_schema()
     
     def _generate_output_schema(self) -> dict:
         """Generate output schema from function return type using Pydantic."""
