@@ -365,13 +365,8 @@ class AsyncMCPToolsClient:
     ) -> Any:
         """Call a tool via MCP."""
         from mcp import ClientSession
-        
-        # Prepare headers with user_id if provided
-        headers = {}
-        if user_id is not None:
-            headers["X-User-ID"] = user_id
             
-        async with await self._create_session_context(headers if headers else None) as streams:
+        async with await self._create_session_context() as streams:
             async with ClientSession(streams[0], streams[1]) as session:
                 await session.initialize()
                 

@@ -129,10 +129,7 @@ class MCPStreamableHandler:
         params = body.get("params", {})
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
-        # Get user_id from headers instead of params
-        user_id = request.headers.get("X-User-ID")
-        
-        print(f"MCP tools/call: tool={tool_name}, user_id={user_id}, args={arguments}")
+        print(f"MCP tools/call: tool={tool_name}, args={arguments}")
 
         if not tool_name:
             return self.create_error(
@@ -145,12 +142,10 @@ class MCPStreamableHandler:
                 "tool_id": tool_name,
                 "input": arguments,
             }
-            if user_id:
-                call_tool_request["user_id"] = user_id
 
             # Execute the tool
             response = await self.tool_handler.call_tool(
-                call_tool_request, request=None
+                call_tool_request, request=request
             )
 
             if not response["success"]:

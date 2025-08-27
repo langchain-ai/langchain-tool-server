@@ -216,7 +216,11 @@ class ToolHandler:
         tool_id = call_tool_request["tool_id"]
         args = call_tool_request.get("input", {})
         execution_id = call_tool_request.get("execution_id", uuid.uuid4())
-        user_id = call_tool_request.get("user_id")
+        
+        # Extract user_id from authenticated user context (set by auth middleware)
+        user_id = None
+        if self.auth_enabled and request and hasattr(request, 'user'):
+            user_id = getattr(request.user, 'identity', None)
 
         if tool_id not in self.catalog:
             if self.auth_enabled:

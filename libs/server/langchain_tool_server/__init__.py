@@ -124,9 +124,6 @@ class Server:
         # trying to access request.auth when auth is not enabled.
         self.tool_handler.auth_enabled = True
 
-        if self._enable_mcp:
-            raise AssertionError("MCPs Python SDK does not support authentication.")
-
         self.app.add_middleware(
             AuthenticationMiddleware,
             backend=ServerAuthenticationBackend(auth),
@@ -222,8 +219,71 @@ class Server:
             if not isinstance(tools, list):
                 raise ValueError(f"TOOLS must be a list, got {type(tools)}")
             
+            # Check for optional routes.py file
+            routes_file = package_dir / "routes.py"
+            custom_router = None
+            
+            if routes_file.exists():
+                logger.info(f"Loading custom routes from {package_name}.routes")
+                try:
+                    # Load routes module
+                    routes_spec = importlib.util.spec_from_file_location(
+                        f"{package_name}.routes",
+                        routes_file
+                    )
+                    if routes_spec and routes_spec.loader:
+                        routes_module = importlib.util.module_from_spec(routes_spec)
+                        sys.modules[f"{package_name}.routes"] = routes_module
+                        routes_spec.loader.exec_module(routes_module)
+                        
+                        # Look for 'router' instance in the routes module
+                        if hasattr(routes_module, 'router'):
+                            custom_router = routes_module.router
+                            logger.info(f"Loaded custom routes from {package_name}.routes")
+                        else:
+                            logger.warning(f"routes.py exists but no 'router' instance found")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to load routes from {package_name}.routes: {e}")
+            
+            # Check for optional auth.py file
+            auth_file = package_dir / "auth.py"
+            auth_instance = None
+            
+            if auth_file.exists():
+                logger.info(f"Loading auth from {package_name}.auth")
+                try:
+                    # Load auth module
+                    auth_spec = importlib.util.spec_from_file_location(
+                        f"{package_name}.auth",
+                        auth_file
+                    )
+                    if auth_spec and auth_spec.loader:
+                        auth_module = importlib.util.module_from_spec(auth_spec)
+                        sys.modules[f"{package_name}.auth"] = auth_module
+                        auth_spec.loader.exec_module(auth_module)
+                        
+                        # Look for 'auth' instance in the auth module
+                        if hasattr(auth_module, 'auth'):
+                            auth_instance = auth_module.auth
+                            logger.info(f"Loaded auth handler from {package_name}.auth")
+                        else:
+                            logger.warning(f"auth.py exists but no 'auth' instance found")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to load auth from {package_name}.auth: {e}")
+            
             # Create server and register tools
             server = cls(**kwargs)
+            
+            # Add custom routes if found
+            if custom_router:
+                server.app.include_router(custom_router)
+            
+            # Add auth if found
+            if auth_instance:
+                server.add_auth(auth_instance)
+            
             for tool in tools:
                 server.add_tool(tool)
                 
