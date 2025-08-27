@@ -156,6 +156,12 @@ class ToolDefinition(TypedDict):
     """The output schema of the tool. This is a JSON schema."""
 
 
+class AuthRequirementsRequest(BaseModel):
+    """Request to get auth requirements for tools."""
+
+    tool_names: list[str] = Field(..., description="List of tool names to check auth requirements for.")
+
+
 class ToolHandler:
     def __init__(self) -> None:
         """Initializes the tool handler."""
@@ -261,6 +267,49 @@ class ToolHandler:
 
         return tool_definitions
 
+    async def get_auth_requirements(
+        self, tool_names: list[str], request: Request | None
+    ) -> Dict[str, list[str]]:
+        """Get consolidated authentication requirements for specified tools.
+        
+        Returns a dict mapping auth provider names to lists of required scopes.
+        Raises HTTPException if any tool doesn't exist or user lacks permission.
+        """
+        provider_scopes: Dict[str, set[str]] = {}
+        
+        for tool_name in tool_names:
+            if tool_name not in self.catalog:
+                if self.auth_enabled:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"Tool '{tool_name}' either does not exist or insufficient permissions",
+                    )
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Tool '{tool_name}' not found"
+                )
+                
+            tool = self.catalog[tool_name]
+
+            if not _is_allowed(tool, request, self.auth_enabled):
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Tool '{tool_name}' either does not exist or insufficient permissions",
+                )
+                
+            # Check if this is a Tool instance with auth requirements
+            tool_fn = tool["fn"]
+            if hasattr(tool_fn, "auth_provider") and tool_fn.auth_provider:
+                provider = tool_fn.auth_provider
+                scopes = tool_fn.scopes or []
+                
+                if provider not in provider_scopes:
+                    provider_scopes[provider] = set()
+                
+                # Add all scopes for this provider (automatically deduplicates)
+                provider_scopes[provider].update(scopes)
+        return {provider: list(scopes) for provider, scopes in provider_scopes.items()}
+
 
 class ValidationErrorResponse(TypedDict):
     """Validation error response."""
@@ -295,6 +344,13 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
                 detail="Invalid protocol schema. Expected 'urn:oxp:1.0'.",
             )
         return await tool_handler.call_tool(call_tool_request.request, request)
+
+    @router.post("/auth-requirements", operation_id="get-auth-requirements")
+    async def get_auth_requirements(
+        auth_request: AuthRequirementsRequest, request: Request
+    ) -> Dict[str, list[str]]:
+        """Get consolidated authentication requirements for specified tools."""
+        return await tool_handler.get_auth_requirements(auth_request.tool_names, request)
 
     return router
 
