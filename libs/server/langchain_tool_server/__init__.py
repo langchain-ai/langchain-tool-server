@@ -243,9 +243,9 @@ class Server:
                             logger.info(f"Loaded auth handler from {package_name}.auth")
                         else:
                             logger.warning(f"auth.py exists but no 'auth' instance found")
-                            
                 except Exception as e:
-                    logger.warning(f"Failed to load auth from {package_name}.auth: {e}")
+                    logger.error(f"Failed to load auth from {package_name}.auth: {e}")
+                    raise e
             
             # Create server and register tools
             server = cls(**kwargs)
