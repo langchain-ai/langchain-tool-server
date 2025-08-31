@@ -5,7 +5,7 @@ from typing import Annotated, AsyncGenerator, Optional
 
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from langchain_core.tools import tool
+from langchain_tool_server.tool import tool
 from starlette.requests import Request
 
 from langchain_tool_server import Server

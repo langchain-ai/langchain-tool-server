@@ -6,7 +6,7 @@ from typing import Annotated, AsyncGenerator, Optional, cast
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, HTTPStatusError
-from langchain_core.tools import tool
+from langchain_tool_server.tool import tool
 from langchain_tool_client import AsyncClient, get_async_client
 from starlette.authentication import BaseUser
 from starlette.requests import Request
@@ -352,7 +352,6 @@ async def test_call_tool_with_injected() -> None:
 
 async def test_exposing_existing_langchain_tools() -> None:
     """Test exposing existing langchain tools."""
-    from langchain_core.tools import StructuredTool, tool
 
     @tool
     def say_hello_sync() -> str:
@@ -364,15 +363,10 @@ async def test_exposing_existing_langchain_tools() -> None:
         """Say hello."""
         return "Hello"
 
-    def multiply(a: int, b: int) -> int:
+    @tool
+    def calculator(a: int, b: int) -> int:
         """Multiply two numbers."""
         return a * b
-
-    async def amultiply(a: int, b: int) -> int:
-        """Multiply two numbers."""
-        return a * b
-
-    calculator = StructuredTool.from_function(func=multiply, coroutine=amultiply)
 
     server = Server()
     auth = Auth()
@@ -415,13 +409,13 @@ async def test_exposing_existing_langchain_tools() -> None:
             },
             {
                 "description": "Multiply two numbers.",
-                "id": "multiply",
+                "id": "calculator",
                 "input_schema": {
                     "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
                     "required": ["a", "b"],
                     "type": "object",
                 },
-                "name": "multiply",
+                "name": "calculator",
                 "output_schema": {"type": "integer"},
             },
         ]
@@ -440,7 +434,7 @@ async def test_exposing_existing_langchain_tools() -> None:
             "success": True,
         }
 
-        result = await client.tools.call("multiply", {"a": 2, "b": 3})
+        result = await client.tools.call("calculator", {"a": 2, "b": 3})
         assert result == {
             "call_id": AnyStr(),
             "value": 6,
