@@ -132,7 +132,9 @@ class Tool:
                 f"Tool '{self.name}' requires auth but langchain-auth is not installed"
             ) from e
         except Exception as e:
-            raise RuntimeError(f"Authentication failed for tool '{self.name}': {e}") from e
+            raise RuntimeError(
+                f"Authentication failed for tool '{self.name}': {e}"
+            ) from e
 
     async def __call__(self, *args, user_id: str = None, **kwargs) -> Any:
         """Call the tool function."""
