@@ -90,25 +90,22 @@ jobs:
           echo "pypi_version=$PYPI_VERSION" >> $GITHUB_OUTPUT
           echo "PyPI version: $PYPI_VERSION"
 
-      - name: Install packaging dependency
-        run: pip install packaging
-
       - name: Compare versions
         id: compare-versions
         run: |
           python -c "
-          from packaging import version
-          current = version.parse('${{ steps.get-version.outputs.current_version }}')
-          pypi = version.parse('${{ steps.get-pypi-version.outputs.pypi_version }}')
+          from distutils.version import LooseVersion
+          current = LooseVersion('${{ steps.get-version.outputs.current_version }}')
+          pypi = LooseVersion('${{ steps.get-pypi-version.outputs.pypi_version }}')
           should_publish = current > pypi
           print(f'Current: {current}, PyPI: {pypi}, Should publish: {should_publish}')
           " > version_comparison.txt
           cat version_comparison.txt
           
           SHOULD_PUBLISH=$(python -c "
-          from packaging import version
-          current = version.parse('${{ steps.get-version.outputs.current_version }}')
-          pypi = version.parse('${{ steps.get-pypi-version.outputs.pypi_version }}')
+          from distutils.version import LooseVersion
+          current = LooseVersion('${{ steps.get-version.outputs.current_version }}')
+          pypi = LooseVersion('${{ steps.get-pypi-version.outputs.pypi_version }}')
           print('true' if current > pypi else 'false')
           ")
           echo "should_publish=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
