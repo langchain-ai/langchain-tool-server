@@ -91,7 +91,7 @@ jobs:
           echo "PyPI version: $PYPI_VERSION"
 
       - name: Install packaging dependency
-        run: uv add --dev packaging
+        run: uv pip install packaging
         working-directory: ./libs/server
 
       - name: Compare versions
