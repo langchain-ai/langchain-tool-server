@@ -1,0 +1,2 @@
+[toolkit]
+tools = "./basic_toolkit/__init__.py:TOOLS"
