@@ -1,9 +1,7 @@
 """Test MCP functionality."""
 
-import json
 from pathlib import Path
 
-import pytest
 from httpx import ASGITransport, AsyncClient
 
 from langchain_tool_server import Server

@@ -1,10 +1,10 @@
 import importlib.util
 import logging
 import sys
-import tomllib
 from contextlib import asynccontextmanager
 from typing import Callable, Optional, Tuple, TypeVar, Union, overload
 
+import tomllib
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -17,15 +17,15 @@ from langchain_tool_server.auth.middleware import (
     ServerAuthenticationBackend,
     on_auth_error,
 )
+from langchain_tool_server.context import Context
 from langchain_tool_server.splash import SPLASH
+from langchain_tool_server.tool import tool
 from langchain_tool_server.tools import (
     InjectedRequest,
     ToolHandler,
     create_tools_router,
     validation_exception_handler,
 )
-from langchain_tool_server.tool import tool
-from langchain_tool_server.context import Context
 
 
 def _load_auth_instance(path: str, package_dir) -> Auth:

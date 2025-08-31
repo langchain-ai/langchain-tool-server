@@ -1,10 +1,10 @@
 """Custom tool decorator and base class."""
 
-import os
 import inspect
-from typing import Any, Callable, Optional, List
+import os
+from typing import Any, Callable, List, Optional
+
 import structlog
-from pydantic import validate_arguments
 
 from langchain_tool_server.context import Context
 
@@ -144,7 +144,7 @@ class Tool:
             return auth_response
 
         # Auth successful or not required, execute the tool
-        if hasattr(self.func, "__call__"):
+        if callable(self.func):
             # For auth tools, always inject context as first argument
             if self.auth_provider:
                 if hasattr(self, "_context"):
