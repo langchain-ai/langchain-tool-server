@@ -167,10 +167,9 @@ class MCPStreamableHandler:
         except Exception as e:
             # Check if it's an HTTPException from validation
             from fastapi import HTTPException
+
             if isinstance(e, HTTPException):
-                return self.create_error(
-                    body.get("id"), -32602, str(e.detail), session
-                )
+                return self.create_error(body.get("id"), -32602, str(e.detail), session)
             return self.create_error(
                 body.get("id"), -32603, f"Tool execution failed: {str(e)}", session
             )
