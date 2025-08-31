@@ -2,7 +2,7 @@ import importlib.util
 import logging
 import sys
 from contextlib import asynccontextmanager
-from typing import Callable, Optional, Tuple, TypeVar, Union, overload
+from typing import Callable, TypeVar
 
 import tomllib
 from fastapi import FastAPI
@@ -236,8 +236,8 @@ class Server:
         Args:
             tools: BaseTool instances (created with @tool decorator).
         """
-        for tool in tools:
-            self._add_tool(tool)
+        for tool_item in tools:
+            self._add_tool(tool_item)
 
     def _add_auth(self, auth: Auth) -> None:
         """Add an authentication handler to the server (internal method)."""
@@ -274,8 +274,6 @@ class Server:
         Raises:
             ValueError: If no toolkit package found or TOOLS registry missing
         """
-        import importlib.util
-        import sys
         from pathlib import Path
 
         toolkit_path = Path(toolkit_dir).resolve()
@@ -334,8 +332,8 @@ class Server:
             if auth_instance:
                 server._add_auth(auth_instance)
 
-            for tool in tools:
-                server._add_tool(tool)
+            for tool_item in tools:
+                server._add_tool(tool_item)
 
             logger.info(f"Successfully registered {len(tools)} tools from {tools_path}")
             return server
