@@ -51,3 +51,29 @@ async def test_simple():
         assert data["success"] is True
         assert "execution_id" in data
         assert data["value"] == 8
+
+
+async def test_invalid_params():
+    """Test REST API tool call with invalid parameters returns 400."""
+    # Get path to test toolkit
+    test_dir = Path(__file__).parent.parent / "toolkits" / "basic"
+
+    # Create server from toolkit (without MCP)
+    server = Server.from_toolkit(str(test_dir), enable_mcp=False)
+
+    # Create test client
+    transport = ASGITransport(app=server, raise_app_exceptions=True)
+    async with AsyncClient(base_url="http://localhost", transport=transport) as client:
+        # Test executing the add tool with wrong parameter names
+        response = await client.post(
+            "/tools/call",
+            json={"request": {"tool_id": "add", "input": {"wrong": 5, "params": 3}}},
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+
+        # Should return error details
+        assert "detail" in data
+        assert "Invalid input" in data["detail"]

@@ -71,7 +71,7 @@ class MCPStreamableHandler:
         if session:
             headers["Mcp-Session-Id"] = session.session_id
 
-        return JSONResponse(response_data, status_code=400, headers=headers)
+        return JSONResponse(response_data, status_code=200, headers=headers)
 
     def convert_result_to_content(self, result: Any) -> list[dict]:
         """Convert tool result to MCP content format."""
@@ -165,6 +165,12 @@ class MCPStreamableHandler:
             return self.create_response(body.get("id"), result, session)
 
         except Exception as e:
+            # Check if it's an HTTPException from validation
+            from fastapi import HTTPException
+            if isinstance(e, HTTPException):
+                return self.create_error(
+                    body.get("id"), -32602, str(e.detail), session
+                )
             return self.create_error(
                 body.get("id"), -32603, f"Tool execution failed: {str(e)}", session
             )

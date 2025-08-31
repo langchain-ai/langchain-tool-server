@@ -19,6 +19,56 @@ from typing_extensions import NotRequired, TypedDict
 from langchain_tool_server.tool import Tool
 
 
+def _validate_tool_input(args: dict, input_schema: dict) -> dict:
+    """Validate tool input against schema and return validated args."""
+    try:
+        from pydantic import ValidationError, create_model
+        
+        if "properties" not in input_schema:
+            return args
+            
+        # Build Pydantic model from schema
+        fields = {}
+        properties = input_schema["properties"]
+        required_fields = input_schema.get("required", [])
+        
+        for field_name, field_def in properties.items():
+            field_type = field_def.get("type", "string")
+            # Convert JSON schema types to Python types
+            if field_type == "integer":
+                python_type = int
+            elif field_type == "number":
+                python_type = float
+            elif field_type == "boolean":
+                python_type = bool
+            else:
+                python_type = str
+            
+            # Set default based on required status
+            default = ... if field_name in required_fields else None
+            fields[field_name] = (python_type, default)
+        
+        # Validate with Pydantic
+        ValidationModel = create_model("ValidationModel", **fields)
+        validated = ValidationModel(**args)
+        return validated.model_dump(exclude_none=True)
+        
+    except ValidationError as e:
+        # Convert to readable error message
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            errors.append(f"{field}: {error['msg']}")
+        
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid input: {'; '.join(errors)}"
+        )
+    except Exception:
+        # If validation fails, return args as-is
+        return args
+
+
 class RegisteredTool(TypedDict):
     """A registered tool."""
 
@@ -238,6 +288,9 @@ class ToolHandler:
                 status_code=403,
                 detail="Tool either does not exist or insufficient permissions",
             )
+
+        # Validate input parameters
+        args = _validate_tool_input(args, tool["input_schema"])
 
         # Call the tool
         fn = tool["fn"]
