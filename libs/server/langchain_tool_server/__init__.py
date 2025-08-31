@@ -30,14 +30,14 @@ from langchain_tool_server.context import Context
 
 def _load_auth_instance(path: str, package_dir) -> Auth:
     """Load an Auth instance from a path string.
-    
+
     Args:
         path: Path in format './path/to/file.py:auth_instance_name'
         package_dir: Base directory for resolving relative paths
-        
+
     Returns:
         Auth instance
-        
+
     Raises:
         ValueError: If path format is invalid or auth instance not found
         ImportError: If module cannot be imported
@@ -59,15 +59,15 @@ def _load_auth_instance(path: str, package_dir) -> Auth:
                 file_path = package_dir / module_name[2:]  # Remove ./
             else:
                 file_path = package_dir / module_name
-            
+
             if not file_path.exists():
                 raise FileNotFoundError(f"Auth file not found: {file_path}")
-                
+
             modname = f"dynamic_auth_module_{hash(str(file_path))}"
             modspec = importlib.util.spec_from_file_location(modname, file_path)
             if modspec is None or modspec.loader is None:
                 raise ValueError(f"Could not load auth file: {file_path}")
-            
+
             module = importlib.util.module_from_spec(modspec)
             sys.modules[modname] = module
             modspec.loader.exec_module(module)
@@ -82,7 +82,7 @@ def _load_auth_instance(path: str, package_dir) -> Auth:
             )
         if not isinstance(loaded_auth, Auth):
             raise ValueError(f"Expected an Auth instance, got {type(loaded_auth)}")
-        
+
         return loaded_auth
 
     except ImportError as e:
@@ -93,14 +93,14 @@ def _load_auth_instance(path: str, package_dir) -> Auth:
 
 def _load_tools_object(path: str, package_dir) -> list:
     """Load a TOOLS list from a path string.
-    
+
     Args:
         path: Path in format './path/to/file.py:TOOLS'
         package_dir: Base directory for resolving relative paths
-        
+
     Returns:
         List of tools
-        
+
     Raises:
         ValueError: If path format is invalid or TOOLS object not found
         ImportError: If module cannot be imported
@@ -122,15 +122,15 @@ def _load_tools_object(path: str, package_dir) -> list:
                 file_path = package_dir / module_name[2:]  # Remove ./
             else:
                 file_path = package_dir / module_name
-            
+
             if not file_path.exists():
                 raise FileNotFoundError(f"Tools file not found: {file_path}")
-                
+
             modname = f"dynamic_tools_module_{hash(str(file_path))}"
             modspec = importlib.util.spec_from_file_location(modname, file_path)
             if modspec is None or modspec.loader is None:
                 raise ValueError(f"Could not load tools file: {file_path}")
-            
+
             module = importlib.util.module_from_spec(modspec)
             sys.modules[modname] = module
             modspec.loader.exec_module(module)
@@ -145,13 +145,14 @@ def _load_tools_object(path: str, package_dir) -> list:
             )
         if not isinstance(loaded_tools, list):
             raise ValueError(f"Expected a list of tools, got {type(loaded_tools)}")
-        
+
         return loaded_tools
 
     except ImportError as e:
         raise ImportError(f"Could not import tools module '{module_name}': {e}") from e
     except FileNotFoundError as e:
         raise FileNotFoundError(f"Could not find tools file: {module_name}") from e
+
 
 T = TypeVar("T", bound=Callable)
 
@@ -262,56 +263,58 @@ class Server:
     @classmethod
     def from_toolkit(cls, toolkit_dir: str = ".", **kwargs) -> "Server":
         """Create server from toolkit directory.
-        
+
         Args:
             toolkit_dir: Path to toolkit directory (default: current directory)
             **kwargs: Additional arguments passed to Server constructor
-            
+
         Returns:
             Server instance with toolkit tools registered
-            
+
         Raises:
             ValueError: If no toolkit package found or TOOLS registry missing
         """
         import importlib.util
         import sys
         from pathlib import Path
-        
+
         toolkit_path = Path(toolkit_dir).resolve()
-        
+
         # Find package directory (has __init__.py and is not hidden/cache)
         package_dirs = [
-            d for d in toolkit_path.iterdir() 
-            if d.is_dir() 
-            and (d / "__init__.py").exists() 
-            and not d.name.startswith('.')
-            and d.name not in {'__pycache__', 'node_modules', '.git', '.venv', 'venv', 'env'}
+            d
+            for d in toolkit_path.iterdir()
+            if d.is_dir()
+            and (d / "__init__.py").exists()
+            and not d.name.startswith(".")
+            and d.name
+            not in {"__pycache__", "node_modules", ".git", ".venv", "venv", "env"}
         ]
-        
+
         if not package_dirs:
             raise ValueError(f"No toolkit package found in {toolkit_path}")
-            
+
         package_dir = package_dirs[0]
         package_name = package_dir.name
-        
+
         logger.info(f"Loading toolkit: {package_name}")
-        
+
         try:
             with open(toolkit_path / "toolkit.toml", "rb") as f:
                 toolkit_config = tomllib.load(f)
-            
+
             tools_path = toolkit_config.get("toolkit", {}).get("tools")
             if not tools_path:
                 raise ValueError(
                     "No tools path specified in toolkit.toml. "
                     "Please add: tools = './path/to/file.py:TOOLS'"
                 )
-            
+
             tools = _load_tools_object(tools_path, toolkit_path)
 
             auth_instance = None
             auth_path = toolkit_config.get("toolkit", {}).get("auth")
-            
+
             if auth_path:
                 logger.info(f"Loading auth from path: {auth_path}")
                 try:
@@ -320,22 +323,23 @@ class Server:
                 except Exception as e:
                     logger.error(f"Failed to load auth from {auth_path}: {e}")
                     import traceback
+
                     logger.error(f"Auth loading traceback:\n{traceback.format_exc()}")
                     raise e
-            
+
             # Create server and register tools
             server = cls(**kwargs)
-            
+
             # Add auth if found
             if auth_instance:
                 server._add_auth(auth_instance)
-            
+
             for tool in tools:
                 server._add_tool(tool)
-                
+
             logger.info(f"Successfully registered {len(tools)} tools from {tools_path}")
             return server
-            
+
         except (ImportError, ModuleNotFoundError) as e:
             raise ValueError(f"Error importing toolkit: {e}") from e
 

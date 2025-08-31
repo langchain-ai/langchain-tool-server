@@ -124,7 +124,9 @@ class MCPStreamableHandler:
         result = {"tools": tools_list}
         return self.create_response(body.get("id"), result, session)
 
-    async def handle_tools_call(self, session: MCPSession, body: dict, request: Request) -> JSONResponse:
+    async def handle_tools_call(
+        self, session: MCPSession, body: dict, request: Request
+    ) -> JSONResponse:
         """Handle tools/call request."""
         params = body.get("params", {})
         tool_name = params.get("name")

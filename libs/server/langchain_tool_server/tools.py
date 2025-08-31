@@ -159,7 +159,9 @@ class ToolDefinition(TypedDict):
 class AuthRequirementsRequest(BaseModel):
     """Request to get auth requirements for tools."""
 
-    tool_names: list[str] = Field(..., description="List of tool names to check auth requirements for.")
+    tool_names: list[str] = Field(
+        ..., description="List of tool names to check auth requirements for."
+    )
 
 
 class ToolHandler:
@@ -167,7 +169,6 @@ class ToolHandler:
         """Initializes the tool handler."""
         self.catalog: Dict[str, RegisteredTool] = {}
         self.auth_enabled = False
-
 
     def add(
         self,
@@ -216,11 +217,11 @@ class ToolHandler:
         tool_id = call_tool_request["tool_id"]
         args = call_tool_request.get("input", {})
         execution_id = call_tool_request.get("execution_id", uuid.uuid4())
-        
+
         # Extract user_id from authenticated user context (set by auth middleware)
         user_id = None
-        if self.auth_enabled and request and hasattr(request, 'user'):
-            user_id = getattr(request.user, 'identity', None)
+        if self.auth_enabled and request and hasattr(request, "user"):
+            user_id = getattr(request.user, "identity", None)
 
         if tool_id not in self.catalog:
             if self.auth_enabled:
@@ -250,7 +251,11 @@ class ToolHandler:
             # This is an internal error
             raise AssertionError(f"Invalid tool implementation: {type(fn)}")
 
-        return {"success": True, "execution_id": str(execution_id), "value": tool_output}
+        return {
+            "success": True,
+            "execution_id": str(execution_id),
+            "value": tool_output,
+        }
 
     async def list_tools(self, request: Request | None) -> list[ToolDefinition]:
         """Lists all available tools in the catalog."""
@@ -275,12 +280,12 @@ class ToolHandler:
         self, tool_names: list[str], request: Request | None
     ) -> Dict[str, list[str]]:
         """Get consolidated authentication requirements for specified tools.
-        
+
         Returns a dict mapping auth provider names to lists of required scopes.
         Raises HTTPException if any tool doesn't exist or user lacks permission.
         """
         provider_scopes: Dict[str, set[str]] = {}
-        
+
         for tool_name in tool_names:
             if tool_name not in self.catalog:
                 if self.auth_enabled:
@@ -289,10 +294,9 @@ class ToolHandler:
                         detail=f"Tool '{tool_name}' either does not exist or insufficient permissions",
                     )
                 raise HTTPException(
-                    status_code=404, 
-                    detail=f"Tool '{tool_name}' not found"
+                    status_code=404, detail=f"Tool '{tool_name}' not found"
                 )
-                
+
             tool = self.catalog[tool_name]
 
             if not _is_allowed(tool, request, self.auth_enabled):
@@ -300,16 +304,16 @@ class ToolHandler:
                     status_code=403,
                     detail=f"Tool '{tool_name}' either does not exist or insufficient permissions",
                 )
-                
+
             # Check if this is a Tool instance with auth requirements
             tool_fn = tool["fn"]
             if hasattr(tool_fn, "auth_provider") and tool_fn.auth_provider:
                 provider = tool_fn.auth_provider
                 scopes = tool_fn.scopes or []
-                
+
                 if provider not in provider_scopes:
                     provider_scopes[provider] = set()
-                
+
                 # Add all scopes for this provider (automatically deduplicates)
                 provider_scopes[provider].update(scopes)
         return {provider: list(scopes) for provider, scopes in provider_scopes.items()}
@@ -354,7 +358,9 @@ def create_tools_router(tool_handler: ToolHandler) -> APIRouter:
         auth_request: AuthRequirementsRequest, request: Request
     ) -> Dict[str, list[str]]:
         """Get consolidated authentication requirements for specified tools."""
-        return await tool_handler.get_auth_requirements(auth_request.tool_names, request)
+        return await tool_handler.get_auth_requirements(
+            auth_request.tool_names, request
+        )
 
     return router
 
