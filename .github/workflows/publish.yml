@@ -90,6 +90,9 @@ jobs:
           echo "pypi_version=$PYPI_VERSION" >> $GITHUB_OUTPUT
           echo "PyPI version: $PYPI_VERSION"
 
+      - name: Install packaging dependency
+        run: pip install packaging
+
       - name: Compare versions
         id: compare-versions
         run: |
