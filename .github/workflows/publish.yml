@@ -91,14 +91,12 @@ jobs:
           echo "PyPI version: $PYPI_VERSION"
 
       - name: Install packaging dependency
-        run: uv pip install packaging
-        working-directory: ./libs/server
+        run: pip install packaging
 
       - name: Compare versions
         id: compare-versions
-        working-directory: ./libs/server
         run: |
-          uv run python -c "
+          python -c "
           from packaging import version
           current = version.parse('${{ steps.get-version.outputs.current_version }}')
           pypi = version.parse('${{ steps.get-pypi-version.outputs.pypi_version }}')
@@ -107,7 +105,7 @@ jobs:
           " > version_comparison.txt
           cat version_comparison.txt
           
-          SHOULD_PUBLISH=$(uv run python -c "
+          SHOULD_PUBLISH=$(python -c "
           from packaging import version
           current = version.parse('${{ steps.get-version.outputs.current_version }}')
           pypi = version.parse('${{ steps.get-pypi-version.outputs.pypi_version }}')
