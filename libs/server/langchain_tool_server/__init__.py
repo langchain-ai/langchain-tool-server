@@ -213,13 +213,13 @@ class Server:
             mcp_router = create_mcp_router(self.tool_handler)
             self.app.include_router(mcp_router, prefix="/mcp")
 
-    def add_tool(
+    def _add_tool(
         self,
         tool,
         *,
         permissions: list[str] | None = None,
     ) -> None:
-        """Add a LangChain tool to the server.
+        """Add a LangChain tool to the server (internal method).
 
         Args:
             tool: A BaseTool instance (created with @tool decorator).
@@ -229,17 +229,17 @@ class Server:
         self.tool_handler.add(tool, permissions=permissions)
         logger.info(f"Registered tool: {tool.name}")
 
-    def add_tools(self, *tools) -> None:
-        """Add multiple LangChain tools at once.
+    def _add_tools(self, *tools) -> None:
+        """Add multiple LangChain tools at once (internal method).
 
         Args:
             tools: BaseTool instances (created with @tool decorator).
         """
         for tool in tools:
-            self.add_tool(tool)
+            self._add_tool(tool)
 
-    def add_auth(self, auth: Auth) -> None:
-        """Add an authentication handler to the server."""
+    def _add_auth(self, auth: Auth) -> None:
+        """Add an authentication handler to the server (internal method)."""
         if not isinstance(auth, Auth):
             raise TypeError(f"Expected an instance of Auth, got {type(auth)}")
 
@@ -328,10 +328,10 @@ class Server:
             
             # Add auth if found
             if auth_instance:
-                server.add_auth(auth_instance)
+                server._add_auth(auth_instance)
             
             for tool in tools:
-                server.add_tool(tool)
+                server._add_tool(tool)
                 
             logger.info(f"Successfully registered {len(tools)} tools from {tools_path}")
             return server

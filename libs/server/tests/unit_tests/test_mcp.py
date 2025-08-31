@@ -12,8 +12,6 @@ from langchain_tool_server import Server
 from langchain_tool_server._version import __version__
 from langchain_tool_server.tools import InjectedRequest
 
-from ..unit_tests.utils import AnyStr
-
 
 @asynccontextmanager
 async def get_async_test_client(
@@ -122,7 +120,7 @@ async def test_lifespan() -> None:
         assert result == {
             "value": "bar",
             "success": True,
-            "call_id": AnyStr(),
+            "call_id": "temporary_call_id",
         }
 
     assert calls == ["startup", "shutdown"]
