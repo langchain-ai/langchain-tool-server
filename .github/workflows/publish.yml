@@ -17,13 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["server", "client"]
+        package: ["server"]
         python-version: ["3.11", "3.12"]
         exclude:
           # Only run lint on one Python version per package to save resources
           - package: "server"
-            python-version: "3.11"
-          - package: "client" 
             python-version: "3.11"
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +34,7 @@ jobs:
       - name: Set working directory
         id: set-workdir
         run: |
-          if [ "${{ matrix.package }}" = "server" ]; then
-            echo "workdir=./libs/server" >> $GITHUB_OUTPUT
-          else
-            echo "workdir=./libs/sdk-py" >> $GITHUB_OUTPUT
-          fi
+          echo "workdir=./libs/server" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         working-directory: ${{ steps.set-workdir.outputs.workdir }}
