@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_tool_server import Server
 
 
-async def test_mcp_list_tools():
+async def test_simple():
     """Test MCP list tools endpoint."""
     # Get path to test toolkit
     test_dir = Path(__file__).parent.parent / "toolkits" / "basic"
@@ -53,3 +53,28 @@ async def test_mcp_list_tools():
         assert add_tool["description"] == "Add two numbers."
         assert add_tool["inputSchema"]["properties"]["x"]["type"] == "integer"
         assert add_tool["inputSchema"]["properties"]["y"]["type"] == "integer"
+        
+        # Test executing the add tool
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "add",
+                    "arguments": {"x": 5, "y": 3}
+                }
+            },
+            headers={"Content-Type": "application/json"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify response structure
+        assert data["jsonrpc"] == "2.0"
+        assert data["id"] == 2
+        assert "result" in data
+        assert data["result"]["content"][0]["type"] == "text"
+        assert data["result"]["content"][0]["text"] == "8"
