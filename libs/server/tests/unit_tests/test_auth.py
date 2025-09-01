@@ -48,7 +48,7 @@ async def test_custom_auth_called():
         
         # Verify tools are listed
         tools = response.json()
-        assert len(tools) == 1
+        assert len(tools) == 2
         assert tools[0]["name"] == "test_tool"
         
         # Test 2: HTTP REST API - Execute tool  
@@ -81,7 +81,7 @@ async def test_custom_auth_called():
         assert data["jsonrpc"] == "2.0"
         assert data["id"] == 1
         tools = data["result"]["tools"]
-        assert len(tools) == 1
+        assert len(tools) == 2
         assert tools[0]["name"] == "test_tool"
         
         # Test 4: MCP - Execute tool
@@ -143,3 +143,51 @@ async def test_custom_auth_headers_tracking():
         assert auth_module.LAST_HEADERS is not None
         # The exact headers format may vary due to middleware, but authorization should be tracked
         assert auth_module.LAST_AUTHORIZATION == "Bearer custom_token"
+
+
+async def test_tool_with_auth_provider():
+    """Test tool that uses auth_provider and scopes calls authenticate with expected params."""
+    import os
+    from unittest.mock import patch, AsyncMock
+    
+    # Set required environment variable
+    with patch.dict(os.environ, {"LANGSMITH_API_KEY": "test_api_key"}):
+        test_dir = Path(__file__).parent.parent / "toolkits" / "auth"
+        server = Server.from_toolkit(str(test_dir), enable_mcp=False)
+        
+        # Mock the auth client
+        with patch("langchain_auth.Client") as mock_client_class:
+            # Create mock instances
+            mock_client_instance = AsyncMock()
+            mock_client_class.return_value = mock_client_instance
+            
+            # Mock successful auth (no additional OAuth needed)
+            mock_auth_result = AsyncMock()
+            mock_auth_result.needs_auth = False
+            mock_auth_result.token = "test_oauth_token"
+            mock_client_instance.authenticate.return_value = mock_auth_result
+            
+            transport = ASGITransport(app=server, raise_app_exceptions=True)
+            async with AsyncClient(base_url="http://localhost", transport=transport) as client:
+                
+                # Execute the tool with auth_provider
+                response = await client.post(
+                    "/tools/call",
+                    json={"request": {"tool_id": "test_tool_with_auth_provider", "input": {"message": "test"}}},
+                    headers={"Authorization": "Bearer provider_token"}
+                )
+                
+                assert response.status_code == 200
+                
+                # Verify the response includes the injected token
+                result = response.json()
+                assert result["success"] is True
+                assert result["value"] == "Token: test_oauth_token, Message: test"
+                
+                # Verify authenticate was called with expected parameters
+                mock_client_class.assert_called_once_with(api_key="test_api_key")
+                mock_client_instance.authenticate.assert_called_once_with(
+                    provider="my_provider",
+                    scopes=["scopeA", "scopeB"], 
+                    user_id="test_user_provider_token"
+                )
