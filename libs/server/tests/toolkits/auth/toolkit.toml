@@ -1,0 +1,4 @@
+[toolkit]
+name = "auth_toolkit"
+tools = "./auth_toolkit/__init__.py:TOOLS"
+auth = "./auth_toolkit/auth.py:auth"
