@@ -63,14 +63,53 @@ def _load_auth_instance(path: str, package_dir) -> Auth:
             if not file_path.exists():
                 raise FileNotFoundError(f"Auth file not found: {file_path}")
 
-            modname = f"dynamic_auth_module_{hash(str(file_path))}"
-            modspec = importlib.util.spec_from_file_location(modname, file_path)
+            # Determine proper module name and package from file structure
+            relative_path = file_path.relative_to(package_dir)
+            
+            if len(relative_path.parts) > 1:
+                # File is in a package subdirectory (e.g., oap_tool_server/auth.py)
+                package_name = relative_path.parts[0]
+                module_name_parts = [package_name] + list(relative_path.parts[1:-1]) + [relative_path.stem]
+                full_module_name = ".".join(module_name_parts)
+                module_package = ".".join(module_name_parts[:-1])
+            else:
+                # File is in root directory
+                full_module_name = relative_path.stem
+                module_package = None
+
+            modspec = importlib.util.spec_from_file_location(full_module_name, file_path)
             if modspec is None or modspec.loader is None:
                 raise ValueError(f"Could not load auth file: {file_path}")
 
             module = importlib.util.module_from_spec(modspec)
-            sys.modules[modname] = module
-            modspec.loader.exec_module(module)
+            
+            # Set proper package context for relative imports
+            if module_package:
+                module.__package__ = module_package
+                
+                # Ensure parent package exists in sys.modules
+                if package_name not in sys.modules:
+                    package_init_path = package_dir / package_name / "__init__.py"
+                    if package_init_path.exists():
+                        package_spec = importlib.util.spec_from_file_location(package_name, package_init_path)
+                        if package_spec and package_spec.loader:
+                            package_module = importlib.util.module_from_spec(package_spec)
+                            package_module.__path__ = [str(package_dir / package_name)]
+                            sys.modules[package_name] = package_module
+                            package_spec.loader.exec_module(package_module)
+
+            # Add package directory to sys.path temporarily for imports
+            package_path_str = str(package_dir)
+            path_added = package_path_str not in sys.path
+            if path_added:
+                sys.path.insert(0, package_path_str)
+            
+            try:
+                sys.modules[full_module_name] = module
+                modspec.loader.exec_module(module)
+            finally:
+                if path_added:
+                    sys.path.remove(package_path_str)
         else:
             # Load from Python module
             module = importlib.import_module(module_name)
