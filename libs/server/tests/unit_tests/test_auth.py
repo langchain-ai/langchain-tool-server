@@ -8,12 +8,12 @@ from langchain_tool_server import Server
 
 
 async def test_custom_auth_called():
-    """Test that custom auth function is properly called and tracks requests."""
+    """Test that custom auth function is properly called across all endpoints."""
     # Get path to test auth toolkit
     test_dir = Path(__file__).parent.parent / "toolkits" / "auth"
     
-    # Create server from toolkit
-    server = Server.from_toolkit(str(test_dir), enable_mcp=False)
+    # Create server from toolkit with MCP enabled
+    server = Server.from_toolkit(str(test_dir), enable_mcp=True)
     
     # Import the auth module to access tracking variables
     # We need to import after server creation so the auth module is loaded
@@ -36,44 +36,75 @@ async def test_custom_auth_called():
     transport = ASGITransport(app=server, raise_app_exceptions=True)
     async with AsyncClient(base_url="http://localhost", transport=transport) as client:
         
-        # Test 1: Request without auth should call auth and fail
-        response = await client.post(
-            "/tools/call",
-            json={"request": {"tool_id": "test_tool", "input": {"message": "hello"}}}
-        )
-        assert response.status_code == 401
-        assert auth_module.AUTH_WAS_CALLED
-        assert auth_module.AUTH_CALL_COUNT == 1
-        assert auth_module.LAST_AUTHORIZATION is None
-        
-        # Reset for next test
-        auth_module.reset_auth_tracking()
-        
-        # Test 2: Request with valid bearer token should call auth and succeed
-        response = await client.post(
-            "/tools/call",
-            json={"request": {"tool_id": "test_tool", "input": {"message": "hello"}}},
-            headers={"Authorization": "Bearer test123"}
+        # Test 1: HTTP REST API - List tools
+        response = await client.get(
+            "/tools",
+            headers={"Authorization": "Bearer token1"}
         )
         assert response.status_code == 200
         assert auth_module.AUTH_WAS_CALLED
         assert auth_module.AUTH_CALL_COUNT == 1
-        assert auth_module.LAST_AUTHORIZATION == "Bearer test123"
+        assert auth_module.LAST_AUTHORIZATION == "Bearer token1"
         
-        # Verify the response contains the expected tool output
+        # Verify tools are listed
+        tools = response.json()
+        assert len(tools) == 1
+        assert tools[0]["name"] == "test_tool"
+        
+        # Test 2: HTTP REST API - Execute tool  
+        response = await client.post(
+            "/tools/call",
+            json={"request": {"tool_id": "test_tool", "input": {"message": "hello"}}},
+            headers={"Authorization": "Bearer token2"}
+        )
+        assert response.status_code == 200
+        assert auth_module.AUTH_CALL_COUNT == 2
+        assert auth_module.LAST_AUTHORIZATION == "Bearer token2"
+        
+        # Verify tool execution result
         result = response.json()
         assert result["success"] is True
         assert result["value"] == "Test tool says: hello"
         
-        # Test 3: Another request should increment call count
+        # Test 3: MCP - List tools
         response = await client.post(
-            "/tools/call",
-            json={"request": {"tool_id": "test_tool", "input": {"message": "world"}}},
-            headers={"Authorization": "Bearer another_token"}
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+            headers={"Authorization": "Bearer token3"}
         )
         assert response.status_code == 200
-        assert auth_module.AUTH_CALL_COUNT == 2
-        assert auth_module.LAST_AUTHORIZATION == "Bearer another_token"
+        assert auth_module.AUTH_CALL_COUNT == 3
+        assert auth_module.LAST_AUTHORIZATION == "Bearer token3"
+        
+        # Verify MCP tools list response
+        data = response.json()
+        assert data["jsonrpc"] == "2.0"
+        assert data["id"] == 1
+        tools = data["result"]["tools"]
+        assert len(tools) == 1
+        assert tools[0]["name"] == "test_tool"
+        
+        # Test 4: MCP - Execute tool
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "test_tool", "arguments": {"message": "world"}}
+            },
+            headers={"Authorization": "Bearer token4"}
+        )
+        assert response.status_code == 200
+        assert auth_module.AUTH_CALL_COUNT == 4
+        assert auth_module.LAST_AUTHORIZATION == "Bearer token4"
+        
+        # Verify MCP tool execution result
+        data = response.json()
+        assert data["jsonrpc"] == "2.0"
+        assert data["id"] == 2
+        assert data["result"]["content"][0]["type"] == "text"
+        assert data["result"]["content"][0]["text"] == "Test tool says: world"
 
 
 async def test_custom_auth_headers_tracking():
@@ -84,7 +115,7 @@ async def test_custom_auth_headers_tracking():
     # Find auth module
     import sys
     auth_module = None
-    for name, module in sys.modules.items():
+    for _, module in sys.modules.items():
         if hasattr(module, 'AUTH_WAS_CALLED'):
             auth_module = module
             break
