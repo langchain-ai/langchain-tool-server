@@ -414,7 +414,7 @@ wheels = [
 
 [[package]]
 name = "langchain-tool-server"
-version = "0.0.13"
+version = "0.0.15"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
