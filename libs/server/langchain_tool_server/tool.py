@@ -88,9 +88,10 @@ class Tool:
 
         if not user_id:
             from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=401,
-                detail=f"Tool '{self.name}' requires authentication but no authenticated user provided. Configure server-level authentication to use OAuth-enabled tools."
+                detail=f"Tool '{self.name}' requires authentication but no authenticated user provided. Configure server-level authentication to use OAuth-enabled tools.",
             )
 
         try:
@@ -124,21 +125,29 @@ class Tool:
 
         except ImportError as e:
             from fastapi import HTTPException
-            raise HTTPException(status_code=500, detail="Authentication library not installed") from e
+
+            raise HTTPException(
+                status_code=500, detail="Authentication library not installed"
+            ) from e
         except Exception as e:
             from fastapi import HTTPException
+
             error_str = str(e)
 
             # If HTTP error, return the given status code and detail
             if error_str.startswith("HTTP "):
                 try:
                     status_code = int(error_str.split(":")[0].replace("HTTP ", ""))
-                    raise HTTPException(status_code=status_code, detail=error_str) from e
+                    raise HTTPException(
+                        status_code=status_code, detail=error_str
+                    ) from e
                 except (ValueError, IndexError):
                     pass
-            
+
             # Default to 500
-            raise HTTPException(status_code=500, detail=f"Authentication failed: {error_str}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Authentication failed: {error_str}"
+            ) from e
 
     async def __call__(self, *args, user_id: str = None, **kwargs) -> Any:
         """Call the tool function."""
