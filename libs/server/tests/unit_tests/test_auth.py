@@ -1,7 +1,7 @@
 """Test custom auth functionality."""
 
 from pathlib import Path
-import pytest
+
 from httpx import ASGITransport, AsyncClient
 
 from langchain_tool_server import Server
@@ -147,7 +147,7 @@ async def test_custom_auth_headers_tracking():
 async def test_tool_with_auth_provider():
     """Test tool that uses auth_provider and scopes calls authenticate with expected params."""
     import os
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock, patch
 
     # Set required environment variable
     with patch.dict(os.environ, {"LANGSMITH_API_KEY": "test_api_key"}):
