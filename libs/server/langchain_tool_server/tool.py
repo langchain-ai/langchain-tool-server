@@ -87,17 +87,12 @@ class Tool:
             return None
 
         if not user_id:
-            raise RuntimeError(
-                f"Tool '{self.name}' requires auth but no user_id provided"
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=401,
+                detail=f"Tool '{self.name}' requires authentication but no authenticated user provided. Configure server-level authentication to use OAuth-enabled tools."
             )
 
-        logger.info(
-            "Auth required for tool",
-            tool=self.name,
-            provider=self.auth_provider,
-            scopes=self.scopes,
-            user_id=user_id,
-        )
         try:
             from langchain_auth import Client
 
@@ -128,13 +123,22 @@ class Tool:
                 return None
 
         except ImportError as e:
-            raise RuntimeError(
-                f"Tool '{self.name}' requires auth but langchain-auth is not installed"
-            ) from e
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail="Authentication library not installed") from e
         except Exception as e:
-            raise RuntimeError(
-                f"Authentication failed for tool '{self.name}': {e}"
-            ) from e
+            from fastapi import HTTPException
+            error_str = str(e)
+
+            # If HTTP error, return the given status code and detail
+            if error_str.startswith("HTTP "):
+                try:
+                    status_code = int(error_str.split(":")[0].replace("HTTP ", ""))
+                    raise HTTPException(status_code=status_code, detail=error_str) from e
+                except (ValueError, IndexError):
+                    pass
+            
+            # Default to 500
+            raise HTTPException(status_code=500, detail=f"Authentication failed: {error_str}") from e
 
     async def __call__(self, *args, user_id: str = None, **kwargs) -> Any:
         """Call the tool function."""
