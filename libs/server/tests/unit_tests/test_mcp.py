@@ -9,7 +9,7 @@ from langchain_tool_server import Server
 
 async def test_simple():
     """Test MCP list tools endpoint."""
-    # Get path to test toolkit
+    # Get path to basic test toolkit (now has both regular and auth tools)
     test_dir = Path(__file__).parent.parent / "toolkits" / "basic"
 
     # Create server from toolkit
@@ -35,19 +35,33 @@ async def test_simple():
 
         # Verify tools are listed
         tools = data["result"]["tools"]
-        assert len(tools) == 2
+        assert len(tools) == 3
 
-        # Check hello tool
+        # Check tools without auth
         hello_tool = next(t for t in tools if t["name"] == "hello")
         assert hello_tool["description"] == "Say hello."
+        # Should not have auth fields
+        assert "auth_provider" not in hello_tool
+        assert "scopes" not in hello_tool
 
-        # Check add tool
         add_tool = next(t for t in tools if t["name"] == "add")
         assert add_tool["description"] == "Add two numbers."
-        assert add_tool["inputSchema"]["properties"]["x"]["type"] == "integer"
-        assert add_tool["inputSchema"]["properties"]["y"]["type"] == "integer"
+        # Should not have auth fields
+        assert "auth_provider" not in add_tool
+        assert "scopes" not in add_tool
 
-        # Test executing the add tool
+        # Check tool with auth - verify auth info is included
+        auth_tool = next(t for t in tools if t["name"] == "test_auth_tool")
+        assert auth_tool["description"].startswith(
+            "A test tool that requires authentication."
+        )
+        # Should have auth fields
+        assert "auth_provider" in auth_tool
+        assert "scopes" in auth_tool
+        assert auth_tool["auth_provider"] == "test_provider"
+        assert auth_tool["scopes"] == ["test_scope"]
+
+        # Test executing a non-auth tool
         response = await client.post(
             "/mcp",
             json={

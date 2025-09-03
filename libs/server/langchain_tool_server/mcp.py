@@ -112,13 +112,19 @@ class MCPStreamableHandler:
         for tool in tools:
             tool_name = tool["name"]
             if tool_name not in seen_names:
-                tools_list.append(
-                    {
-                        "name": tool_name,
-                        "description": tool["description"],
-                        "inputSchema": tool["input_schema"],
-                    }
-                )
+                mcp_tool = {
+                    "name": tool_name,
+                    "description": tool["description"],
+                    "inputSchema": tool["input_schema"],
+                }
+
+                # Add auth requirements if present
+                if "auth_provider" in tool:
+                    mcp_tool["auth_provider"] = tool["auth_provider"]
+                if "scopes" in tool:
+                    mcp_tool["scopes"] = tool["scopes"]
+
+                tools_list.append(mcp_tool)
                 seen_names.add(tool_name)
 
         result = {"tools": tools_list}
