@@ -1,0 +1,43 @@
+# Example toolkit configuration with MCP servers
+
+[toolkit]
+name = "mcp_example"
+tools = "./mcp_toolkit/__init__.py:TOOLS"
+# Optional: Control whether MCP tool names are prefixed with server name
+mcp_prefix_tools = true
+
+# MCP Server configurations
+# Each [[mcp_servers]] section defines a separate MCP server connection
+
+# Example 1: stdio transport (for local MCP server processes)
+[[mcp_servers]]
+name = "math_server"
+transport = "stdio"
+command = "python"
+args = ["-m", "mcp_server_math"]
+# Optional environment variables
+# env = { "DEBUG" = "true" }
+
+# Example 2: streamable_http transport (for HTTP-based MCP servers)
+[[mcp_servers]]
+name = "weather_api"
+transport = "streamable_http"
+url = "http://localhost:8000/mcp/"
+# Optional headers for authentication - secrets will be read from env
+headers = { "Authorization" = "Bearer secrets.API_KEY" }
+# Optional timeout in seconds
+timeout = 30
+
+# Example 3: SSE transport (Server-Sent Events)
+[[mcp_servers]]
+name = "local_tools"
+transport = "sse"
+url = "http://localhost:9000/sse"
+# Optional timeout as float in seconds
+timeout = 10.0
+
+# Example 4: WebSocket transport
+# [[mcp_servers]]
+# name = "websocket_server"
+# transport = "websocket"
+# url = "ws://localhost:8080/ws"

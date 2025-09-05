@@ -1,6 +1,6 @@
 [project]
 name = "langchain-tool-server"
-version = "0.0.17"
+version = "0.0.18"
 description = "LangChain Tool Server (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.7.2",
     "structlog>=20.1.0",
     "langchain-auth>=0.1.2",
+    "langchain-mcp-adapters>=0.1.0",
 ]
 
 [dependency-groups]

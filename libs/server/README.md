@@ -204,6 +204,56 @@ for message in messages:
     message.pretty_print()
 ```
 
+### MCP Server Integration
+
+The tool server can now load tools from external MCP servers alongside native LangChain tools. This allows you to integrate existing MCP tools into your LangChain workflow.
+
+#### Configuration
+
+Configure MCP servers in your `toolkit.toml`:
+
+```toml
+[toolkit]
+name = "my_toolkit"
+tools = "./my_toolkit/__init__.py:TOOLS"
+
+[[mcp_servers]]
+name = "math"
+transport = "stdio"
+command = "python"
+args = ["-m", "mcp_server_math"]
+
+[[mcp_servers]]
+name = "weather"
+transport = "streamable_http"
+url = "http://localhost:8000/mcp/"
+headers = { "Authorization" = "Bearer token" }
+```
+
+#### Usage
+
+Use async initialization to load MCP tools:
+
+```python
+import asyncio
+from langchain_tool_server import Server
+
+async def main():
+    # Load server with MCP tools
+    server = await Server.afrom_toolkit(mcp=True)
+    # Server now has both native and MCP tools
+    
+asyncio.run(main())
+```
+
+Alternatively, if you have `langchain-cli-v2` package installed, you can just run:
+
+```shell
+langchain tools serve
+```
+
+See [MCP_SERVERS_GUIDE.md](MCP_SERVERS_GUIDE.md) for detailed documentation.
+
 ### MCP SSE
 
 You can enable support for the MCP SSE protocol by passing `enable_mcp=True` to the Server constructor.
