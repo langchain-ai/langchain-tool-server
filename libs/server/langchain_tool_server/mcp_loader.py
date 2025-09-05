@@ -286,29 +286,31 @@ async def load_mcp_servers_tools(
         try:
             logger.info(f"Loading tools from MCP server: {server_name}")
 
-            # Use explicit session management for better error handling
-            async with client.session(server_name) as session:
-                base_tools = await load_mcp_tools(session)
-                # Wrap each BaseTool with MCPToolAdapter
-                adapted_tools = []
-                for base_tool in base_tools:
-                    # Store original name in metadata
-                    if not hasattr(base_tool, "metadata") or base_tool.metadata is None:
-                        base_tool.metadata = {}
-                    base_tool.metadata["mcp_server"] = server_name
-                    base_tool.metadata["original_name"] = base_tool.name
+            # Use connection config instead of session to avoid session lifecycle issues
+            # This allows tools to create fresh sessions with headers per call
+            connection_config = connections[server_name]
+            base_tools = await load_mcp_tools(session=None, connection=connection_config)
+            
+            # Wrap each BaseTool with MCPToolAdapter
+            adapted_tools = []
+            for base_tool in base_tools:
+                # Store original name in metadata
+                if not hasattr(base_tool, "metadata") or base_tool.metadata is None:
+                    base_tool.metadata = {}
+                base_tool.metadata["mcp_server"] = server_name
+                base_tool.metadata["original_name"] = base_tool.name
 
-                    # Optionally prefix tool names with server name
-                    if prefix_tools:
-                        base_tool.name = f"{server_name}.{base_tool.name}"
-                    # Create adapter wrapper
-                    adapter = MCPToolAdapter(base_tool)
-                    adapted_tools.append(adapter)
+                # Optionally prefix tool names with server name
+                if prefix_tools:
+                    base_tool.name = f"{server_name}.{base_tool.name}"
+                # Create adapter wrapper
+                adapter = MCPToolAdapter(base_tool)
+                adapted_tools.append(adapter)
 
-                all_tools.extend(adapted_tools)
-                logger.info(
-                    f"Successfully loaded {len(adapted_tools)} tools from MCP server: {server_name}"
-                )
+            all_tools.extend(adapted_tools)
+            logger.info(
+                f"Successfully loaded {len(adapted_tools)} tools from MCP server: {server_name}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to load tools from MCP server '{server_name}': {e}")
