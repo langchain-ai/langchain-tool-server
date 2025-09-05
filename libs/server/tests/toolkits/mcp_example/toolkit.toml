@@ -23,8 +23,8 @@ args = ["-m", "mcp_server_math"]
 name = "weather_api"
 transport = "streamable_http"
 url = "http://localhost:8000/mcp/"
-# Optional headers for authentication
-headers = { "Authorization" = "Bearer your-token-here" }
+# Optional headers for authentication - secrets will be read from env
+headers = { "Authorization" = "Bearer secrets.API_KEY" }
 # Optional timeout in seconds
 timeout = 30
 

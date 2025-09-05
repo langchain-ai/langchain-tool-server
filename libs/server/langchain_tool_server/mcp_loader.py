@@ -5,6 +5,8 @@ to LangChain tools that can be used within the tool server.
 """
 
 import logging
+import os
+import re
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
@@ -22,6 +24,61 @@ class MCPConfigError(ValueError):
     """Raised when MCP server configuration is invalid."""
 
     pass
+
+
+def substitute_env_vars(value: Any) -> Any:
+    """Substitute environment variables in configuration values.
+    
+    Supports the following patterns:
+    - ${{ secrets.VAR_NAME }} -> os.environ['VAR_NAME']
+    - ${{ env.VAR_NAME }} -> os.environ['VAR_NAME'] 
+    - ${VAR_NAME} -> os.environ['VAR_NAME']
+    - $VAR_NAME -> os.environ['VAR_NAME']
+    
+    Args:
+        value: Configuration value to process (can be string, dict, list, etc.)
+        
+    Returns:
+        Value with environment variables substituted
+        
+    Raises:
+        MCPConfigError: If referenced environment variable is not found
+    """
+    if isinstance(value, str):
+        # Pattern for ${{ secrets.VAR_NAME }} or ${{ env.VAR_NAME }}
+        github_pattern = r'\$\{\{\s*(?:secrets|env)\.([A-Z_][A-Z0-9_]*)\s*\}\}'
+        # Pattern for ${VAR_NAME}
+        brace_pattern = r'\$\{([A-Z_][A-Z0-9_]*)\}'
+        # Pattern for $VAR_NAME (word boundary to avoid partial matches)
+        simple_pattern = r'\$([A-Z_][A-Z0-9_]*)\b'
+        
+        def replace_env_var(match):
+            var_name = match.group(1)
+            if var_name not in os.environ:
+                raise MCPConfigError(
+                    f"Environment variable '{var_name}' not found. "
+                    f"Please set it in your environment."
+                )
+            return os.environ[var_name]
+        
+        # Apply substitutions in order of specificity
+        value = re.sub(github_pattern, replace_env_var, value)
+        value = re.sub(brace_pattern, replace_env_var, value)
+        value = re.sub(simple_pattern, replace_env_var, value)
+        
+        return value
+    
+    elif isinstance(value, dict):
+        # Recursively process dictionary values
+        return {k: substitute_env_vars(v) for k, v in value.items()}
+    
+    elif isinstance(value, list):
+        # Recursively process list items
+        return [substitute_env_vars(item) for item in value]
+    
+    else:
+        # Return other types as-is
+        return value
 
 
 class MCPToolAdapter(Tool):
@@ -97,6 +154,9 @@ def validate_mcp_config(config: dict) -> dict:
     Raises:
         MCPConfigError: If configuration is invalid
     """
+    # Apply environment variable substitution to the entire config
+    config = substitute_env_vars(config)
+    
     if "name" not in config:
         raise MCPConfigError("MCP server configuration must have a 'name' field")
 
@@ -241,7 +301,6 @@ async def load_mcp_servers_tools(
                     # Optionally prefix tool names with server name
                     if prefix_tools:
                         base_tool.name = f"{server_name}.{base_tool.name}"
-                    print("foo bar baz")
                     # Create adapter wrapper
                     adapter = MCPToolAdapter(base_tool)
                     adapted_tools.append(adapter)
