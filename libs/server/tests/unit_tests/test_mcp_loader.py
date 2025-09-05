@@ -179,8 +179,8 @@ class TestLoadMCPServersTools:
 
                 assert len(tools) == 1
                 assert tools[0].name == "math.add"
-                assert tools[0].metadata["mcp_server"] == "math"
-                assert tools[0].metadata["original_name"] == "add"
+                assert tools[0].base_tool.metadata["mcp_server"] == "math"
+                assert tools[0].base_tool.metadata["original_name"] == "add"
 
     @pytest.mark.asyncio
     async def test_load_tools_without_prefix(self):
@@ -232,48 +232,33 @@ class TestLoadMCPServersTools:
             },
         ]
 
-        with patch(
-            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
-        ) as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
-
-            # Create different behaviors for each server
+        with patch("langchain_tool_server.mcp_loader.load_mcp_tools") as mock_load:
+            # Create a working tool mock
+            mock_working_tool = MagicMock()
+            mock_working_tool.name = "test_tool"
+            mock_working_tool.metadata = {}
+            
+            # Track call count to distinguish between servers
             call_count = 0
-
-            def session_side_effect(server_name):
+            
+            def load_side_effect(session=None, connection=None):
                 nonlocal call_count
                 call_count += 1
-
-                mock_ctx = MagicMock()
-                if server_name == "failing_server":
-                    # First server fails
-                    async def aenter_failing():
-                        raise Exception("Connection failed")
-
-                    mock_ctx.__aenter__ = aenter_failing
+                
+                # First call (failing_server) should raise exception
+                if call_count == 1:
+                    raise Exception("Connection failed")
+                # Second call (working_server) should return tools
                 else:
-                    # Second server works
-                    mock_session = AsyncMock()
-                    mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+                    return [mock_working_tool]
+            
+            mock_load.side_effect = load_side_effect
 
-                mock_ctx.__aexit__ = AsyncMock()
-                return mock_ctx
+            tools = await load_mcp_servers_tools(configs)
 
-            mock_client.session.side_effect = session_side_effect
-
-            mock_tool = MagicMock()
-            mock_tool.name = "tool"
-            mock_tool.metadata = {}
-
-            with patch("langchain_tool_server.mcp_loader.load_mcp_tools") as mock_load:
-                mock_load.return_value = [mock_tool]
-
-                tools = await load_mcp_servers_tools(configs)
-
-                # Should have loaded tools from working server only
-                assert len(tools) == 1
-                assert tools[0].metadata["mcp_server"] == "working_server"
+            # Should have loaded tools from working server only
+            assert len(tools) == 1
+            assert tools[0].base_tool.metadata["mcp_server"] == "working_server"
 
     @pytest.mark.asyncio
     async def test_invalid_config_raises_error(self):
