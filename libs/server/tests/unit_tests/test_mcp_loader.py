@@ -237,21 +237,21 @@ class TestLoadMCPServersTools:
             mock_working_tool = MagicMock()
             mock_working_tool.name = "test_tool"
             mock_working_tool.metadata = {}
-            
+
             # Track call count to distinguish between servers
             call_count = 0
-            
+
             def load_side_effect(session=None, connection=None):
                 nonlocal call_count
                 call_count += 1
-                
+
                 # First call (failing_server) should raise exception
                 if call_count == 1:
                     raise Exception("Connection failed")
                 # Second call (working_server) should return tools
                 else:
                     return [mock_working_tool]
-            
+
             mock_load.side_effect = load_side_effect
 
             tools = await load_mcp_servers_tools(configs)
