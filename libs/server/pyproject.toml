@@ -1,6 +1,6 @@
 [project]
 name = "langchain-tool-server"
-version = "0.0.17"
+version = "0.0.18"
 description = "LangChain Tool Server (Python)"
 readme = "README.md"
 requires-python = ">=3.10"
