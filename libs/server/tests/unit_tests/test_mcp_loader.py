@@ -1,14 +1,15 @@
 """Unit tests for MCP server loader functionality."""
 
-import pytest
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from langchain_tool_server.mcp_loader import (
     MCPConfigError,
-    validate_mcp_config,
-    load_mcp_servers_tools,
     initialize_mcp_client,
+    load_mcp_servers_tools,
+    validate_mcp_config,
 )
 
 
@@ -153,13 +154,17 @@ class TestLoadMCPServersTools:
         ]
 
         # Mock the MultiServerMCPClient and load_mcp_tools
-        with patch("langchain_tool_server.mcp_loader.MultiServerMCPClient") as mock_client_class:
+        with patch(
+            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
+        ) as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
             # Create mock session context manager
             mock_session = AsyncMock()
-            mock_client.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_client.session.return_value.__aenter__ = AsyncMock(
+                return_value=mock_session
+            )
             mock_client.session.return_value.__aexit__ = AsyncMock()
 
             # Mock tools
@@ -188,12 +193,16 @@ class TestLoadMCPServersTools:
             }
         ]
 
-        with patch("langchain_tool_server.mcp_loader.MultiServerMCPClient") as mock_client_class:
+        with patch(
+            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
+        ) as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
             mock_session = AsyncMock()
-            mock_client.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_client.session.return_value.__aenter__ = AsyncMock(
+                return_value=mock_session
+            )
             mock_client.session.return_value.__aexit__ = AsyncMock()
 
             mock_tool = MagicMock()
@@ -223,7 +232,9 @@ class TestLoadMCPServersTools:
             },
         ]
 
-        with patch("langchain_tool_server.mcp_loader.MultiServerMCPClient") as mock_client_class:
+        with patch(
+            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
+        ) as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -233,18 +244,19 @@ class TestLoadMCPServersTools:
             def session_side_effect(server_name):
                 nonlocal call_count
                 call_count += 1
-                
+
                 mock_ctx = MagicMock()
                 if server_name == "failing_server":
                     # First server fails
                     async def aenter_failing():
                         raise Exception("Connection failed")
+
                     mock_ctx.__aenter__ = aenter_failing
                 else:
                     # Second server works
                     mock_session = AsyncMock()
                     mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-                    
+
                 mock_ctx.__aexit__ = AsyncMock()
                 return mock_ctx
 
@@ -296,7 +308,9 @@ class TestInitializeMCPClient:
             },
         ]
 
-        with patch("langchain_tool_server.mcp_loader.MultiServerMCPClient") as mock_client_class:
+        with patch(
+            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
+        ) as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -304,7 +318,7 @@ class TestInitializeMCPClient:
 
             assert client == mock_client
             mock_client_class.assert_called_once()
-            
+
             # Check that both servers were configured
             call_args = mock_client_class.call_args[0][0]
             assert "server1" in call_args
@@ -325,14 +339,16 @@ class TestInitializeMCPClient:
             },
         ]
 
-        with patch("langchain_tool_server.mcp_loader.MultiServerMCPClient") as mock_client_class:
+        with patch(
+            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
+        ) as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
             client = await initialize_mcp_client(configs)
 
             assert client == mock_client
-            
+
             # Only valid server should be configured
             call_args = mock_client_class.call_args[0][0]
             assert "valid_server" in call_args

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Simple test MCP server using FastMCP."""
 
-import asyncio
 from fastmcp import FastMCP
 
 # Create server
@@ -28,5 +27,5 @@ def mcp_greet(name: str) -> str:
 
 if __name__ == "__main__":
     # Run as stdio server
-    import sys
+
     mcp.run(transport="stdio")

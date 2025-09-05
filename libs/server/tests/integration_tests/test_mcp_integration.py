@@ -21,22 +21,29 @@ async def test_mcp_toolkit():
         # Test sync method (should warn about MCP servers)
         logger.info("Testing sync from_toolkit...")
         sync_server = Server.from_toolkit(str(toolkit_path), enable_mcp=False)
-        logger.info(f"Sync server created with {len(sync_server.tool_handler.catalog)} tools")
+        logger.info(
+            f"Sync server created with {len(sync_server.tool_handler.catalog)} tools"
+        )
 
         # Test async method (should load MCP servers)
         logger.info("\nTesting async afrom_toolkit...")
         async_server = await Server.afrom_toolkit(str(toolkit_path), enable_mcp=False)
-        logger.info(f"Async server created with {len(async_server.tool_handler.catalog)} tools")
+        logger.info(
+            f"Async server created with {len(async_server.tool_handler.catalog)} tools"
+        )
 
         # List loaded tools
         logger.info("\nLoaded tools:")
         for tool_name in async_server.tool_handler.catalog.keys():
             tool_info = async_server.tool_handler.catalog[tool_name]
-            logger.info(f"  - {tool_name}: {tool_info.get('description', 'No description')}")
+            logger.info(
+                f"  - {tool_name}: {tool_info.get('description', 'No description')}"
+            )
 
     except Exception as e:
         logger.error(f"Error testing MCP toolkit: {e}")
         import traceback
+
         logger.error(traceback.format_exc())
 
 
@@ -50,10 +57,14 @@ async def test_basic_toolkit():
     try:
         # Both sync and async should work the same for non-MCP toolkits
         sync_server = Server.from_toolkit(str(toolkit_path))
-        logger.info(f"Basic sync server created with {len(sync_server.tool_handler.catalog)} tools")
+        logger.info(
+            f"Basic sync server created with {len(sync_server.tool_handler.catalog)} tools"
+        )
 
         async_server = await Server.afrom_toolkit(str(toolkit_path))
-        logger.info(f"Basic async server created with {len(async_server.tool_handler.catalog)} tools")
+        logger.info(
+            f"Basic async server created with {len(async_server.tool_handler.catalog)} tools"
+        )
 
     except Exception as e:
         logger.error(f"Error testing basic toolkit: {e}")

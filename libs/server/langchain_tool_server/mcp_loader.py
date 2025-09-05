@@ -28,30 +28,30 @@ class MCPConfigError(ValueError):
 
 def substitute_env_vars(value: Any) -> Any:
     """Substitute environment variables in configuration values.
-    
+
     Supports the following patterns:
     - ${{ secrets.VAR_NAME }} -> os.environ['VAR_NAME']
-    - ${{ env.VAR_NAME }} -> os.environ['VAR_NAME'] 
+    - ${{ env.VAR_NAME }} -> os.environ['VAR_NAME']
     - ${VAR_NAME} -> os.environ['VAR_NAME']
     - $VAR_NAME -> os.environ['VAR_NAME']
-    
+
     Args:
         value: Configuration value to process (can be string, dict, list, etc.)
-        
+
     Returns:
         Value with environment variables substituted
-        
+
     Raises:
         MCPConfigError: If referenced environment variable is not found
     """
     if isinstance(value, str):
         # Pattern for ${{ secrets.VAR_NAME }} or ${{ env.VAR_NAME }}
-        github_pattern = r'\$\{\{\s*(?:secrets|env)\.([A-Z_][A-Z0-9_]*)\s*\}\}'
+        github_pattern = r"\$\{\{\s*(?:secrets|env)\.([A-Z_][A-Z0-9_]*)\s*\}\}"
         # Pattern for ${VAR_NAME}
-        brace_pattern = r'\$\{([A-Z_][A-Z0-9_]*)\}'
+        brace_pattern = r"\$\{([A-Z_][A-Z0-9_]*)\}"
         # Pattern for $VAR_NAME (word boundary to avoid partial matches)
-        simple_pattern = r'\$([A-Z_][A-Z0-9_]*)\b'
-        
+        simple_pattern = r"\$([A-Z_][A-Z0-9_]*)\b"
+
         def replace_env_var(match):
             var_name = match.group(1)
             if var_name not in os.environ:
@@ -60,22 +60,22 @@ def substitute_env_vars(value: Any) -> Any:
                     f"Please set it in your environment."
                 )
             return os.environ[var_name]
-        
+
         # Apply substitutions in order of specificity
         value = re.sub(github_pattern, replace_env_var, value)
         value = re.sub(brace_pattern, replace_env_var, value)
         value = re.sub(simple_pattern, replace_env_var, value)
-        
+
         return value
-    
+
     elif isinstance(value, dict):
         # Recursively process dictionary values
         return {k: substitute_env_vars(v) for k, v in value.items()}
-    
+
     elif isinstance(value, list):
         # Recursively process list items
         return [substitute_env_vars(item) for item in value]
-    
+
     else:
         # Return other types as-is
         return value
@@ -108,7 +108,11 @@ class MCPToolAdapter(Tool):
         """Get input schema from the BaseTool."""
         if hasattr(self.base_tool, "args_schema") and self.base_tool.args_schema:
             # Use the Pydantic model's JSON schema
-            return self.base_tool.args_schema if isinstance(self.base_tool.args_schema, dict) else self.base_tool.args_schema.model_json_schema()
+            return (
+                self.base_tool.args_schema
+                if isinstance(self.base_tool.args_schema, dict)
+                else self.base_tool.args_schema.model_json_schema()
+            )
         return {"type": "object", "properties": {}}
 
     def _get_output_schema(self) -> dict:
@@ -156,7 +160,7 @@ def validate_mcp_config(config: dict) -> dict:
     """
     # Apply environment variable substitution to the entire config
     config = substitute_env_vars(config)
-    
+
     if "name" not in config:
         raise MCPConfigError("MCP server configuration must have a 'name' field")
 
@@ -264,7 +268,9 @@ async def load_mcp_servers_tools(
         try:
             name = config.get("name")
             if not name:
-                raise MCPConfigError("MCP server configuration must have a 'name' field")
+                raise MCPConfigError(
+                    "MCP server configuration must have a 'name' field"
+                )
 
             # Validate and normalize the configuration
             connection_config = validate_mcp_config(config)
@@ -278,9 +284,6 @@ async def load_mcp_servers_tools(
         logger.warning("No valid MCP server configurations found")
         return []
 
-    # Create the multi-server client
-    client = MultiServerMCPClient(connections)
-
     # Load tools from each server
     for server_name in connections.keys():
         try:
@@ -289,8 +292,10 @@ async def load_mcp_servers_tools(
             # Use connection config instead of session to avoid session lifecycle issues
             # This allows tools to create fresh sessions with headers per call
             connection_config = connections[server_name]
-            base_tools = await load_mcp_tools(session=None, connection=connection_config)
-            
+            base_tools = await load_mcp_tools(
+                session=None, connection=connection_config
+            )
+
             # Wrap each BaseTool with MCPToolAdapter
             adapted_tools = []
             for base_tool in base_tools:

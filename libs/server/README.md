@@ -240,10 +240,16 @@ from langchain_tool_server import Server
 
 async def main():
     # Load server with MCP tools
-    server = await Server.afrom_toolkit("./my_toolkit")
+    server = await Server.afrom_toolkit(mcp=True)
     # Server now has both native and MCP tools
     
 asyncio.run(main())
+```
+
+Alternatively, if you have `langchain-cli-v2` package installed, you can just run:
+
+```shell
+langchain tools serve
 ```
 
 See [MCP_SERVERS_GUIDE.md](MCP_SERVERS_GUIDE.md) for detailed documentation.
