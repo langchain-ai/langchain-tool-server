@@ -175,46 +175,12 @@ class TestLoadMCPServersTools:
             with patch("langchain_tool_server.mcp_loader.load_mcp_tools") as mock_load:
                 mock_load.return_value = [mock_tool]
 
-                tools = await load_mcp_servers_tools(configs, prefix_tools=True)
+                tools = await load_mcp_servers_tools(configs)
 
                 assert len(tools) == 1
                 assert tools[0].name == "math.add"
                 assert tools[0].base_tool.metadata["mcp_server"] == "math"
                 assert tools[0].base_tool.metadata["original_name"] == "add"
-
-    @pytest.mark.asyncio
-    async def test_load_tools_without_prefix(self):
-        """Test loading tools without name prefixing."""
-        configs = [
-            {
-                "name": "math",
-                "transport": "stdio",
-                "command": "python",
-            }
-        ]
-
-        with patch(
-            "langchain_tool_server.mcp_loader.MultiServerMCPClient"
-        ) as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
-
-            mock_session = AsyncMock()
-            mock_client.session.return_value.__aenter__ = AsyncMock(
-                return_value=mock_session
-            )
-            mock_client.session.return_value.__aexit__ = AsyncMock()
-
-            mock_tool = MagicMock()
-            mock_tool.name = "add"
-
-            with patch("langchain_tool_server.mcp_loader.load_mcp_tools") as mock_load:
-                mock_load.return_value = [mock_tool]
-
-                tools = await load_mcp_servers_tools(configs, prefix_tools=False)
-
-                assert len(tools) == 1
-                assert tools[0].name == "add"  # Name not prefixed
 
     @pytest.mark.asyncio
     async def test_handle_failed_server(self):

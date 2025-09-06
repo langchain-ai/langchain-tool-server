@@ -14,7 +14,14 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.0",
 ]
 
+dev-dependencies = [
+    "fastmcp>=2.12.2"
+]
+
 [dependency-groups]
+dev = [
+    "fastmcp>=2.12.2",
+]
 test = [
     "uvicorn>=0.34.0",
     "httpx>=0.28.1",

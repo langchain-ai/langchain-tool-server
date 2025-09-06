@@ -14,17 +14,13 @@ mcp_prefix_tools = true
 name = "math_server"
 transport = "stdio"
 command = "python"
-args = ["-m", "mcp_server_math"]
-# Optional environment variables
-# env = { "DEBUG" = "true" }
+args = ["tests/server/math_stdio_server.py"]
 
 # Example 2: streamable_http transport (for HTTP-based MCP servers)
 [[mcp_servers]]
 name = "weather_api"
 transport = "streamable_http"
 url = "http://localhost:8000/mcp/"
-# Optional headers for authentication - secrets will be read from env
-headers = { "Authorization" = "Bearer secrets.API_KEY" }
 # Optional timeout in seconds
 timeout = 30
 
@@ -37,7 +33,7 @@ url = "http://localhost:9000/sse"
 timeout = 10.0
 
 # Example 4: WebSocket transport
-# [[mcp_servers]]
-# name = "websocket_server"
-# transport = "websocket"
-# url = "ws://localhost:8080/ws"
+[[mcp_servers]]
+name = "websocket_server"
+transport = "websocket"
+url = "ws://localhost:8080/ws"

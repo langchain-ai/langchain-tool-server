@@ -97,8 +97,6 @@ class MCPToolAdapter(Tool):
         self.func = wrapper_func
         self.name = base_tool.name
         self.description = base_tool.description or ""
-        self.auth_provider = None  # MCP tools don't use built-in auth
-        self.scopes = []
 
         # Get schemas from the BaseTool
         self.input_schema = self._get_input_schema()
@@ -134,10 +132,6 @@ class MCPToolAdapter(Tool):
         wrapper.__doc__ = self.base_tool.description
 
         return wrapper
-
-    async def _auth_hook(self, user_id: str = None):
-        """Auth hook - MCP tools don't use built-in auth."""
-        return None
 
     async def __call__(self, *args, user_id: str = None, **kwargs) -> Any:
         """Call the wrapped tool."""
@@ -241,14 +235,12 @@ def validate_mcp_config(config: dict) -> dict:
 
 async def load_mcp_servers_tools(
     mcp_configs: List[Dict[str, Any]],
-    prefix_tools: bool = True,
 ) -> List[Any]:  # Returns list of MCPToolAdapter instances
     """Load tools from multiple MCP servers.
 
     Args:
         mcp_configs: List of MCP server configurations from toolkit.toml
         enable_mcp: Whether MCP mode is enabled (affects auth behavior)
-        prefix_tools: Whether to prefix tool names with server name to avoid conflicts
 
     Returns:
         List of MCPToolAdapter instances wrapping the MCP tools
@@ -299,15 +291,7 @@ async def load_mcp_servers_tools(
             # Wrap each BaseTool with MCPToolAdapter
             adapted_tools = []
             for base_tool in base_tools:
-                # Store original name in metadata
-                if not hasattr(base_tool, "metadata") or base_tool.metadata is None:
-                    base_tool.metadata = {}
-                base_tool.metadata["mcp_server"] = server_name
-                base_tool.metadata["original_name"] = base_tool.name
-
-                # Optionally prefix tool names with server name
-                if prefix_tools:
-                    base_tool.name = f"{server_name}.{base_tool.name}"
+                base_tool.name = f"{server_name}.{base_tool.name}"
                 # Create adapter wrapper
                 adapter = MCPToolAdapter(base_tool)
                 adapted_tools.append(adapter)

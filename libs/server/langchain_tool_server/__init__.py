@@ -453,7 +453,6 @@ class Server:
                 # Load tools from MCP servers
                 mcp_tools = await load_mcp_servers_tools(
                     mcp_servers,
-                    prefix_tools=toolkit_config.get("mcp_prefix_tools", True),
                 )
 
                 # Register MCP tools

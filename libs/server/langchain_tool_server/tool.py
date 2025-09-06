@@ -5,6 +5,7 @@ import os
 from typing import Any, Callable, List, Optional
 
 import structlog
+from pydantic import create_model
 
 from langchain_tool_server.context import Context
 
@@ -32,8 +33,6 @@ class Tool:
 
     def _generate_input_schema(self) -> dict:
         """Generate input schema from function signature using Pydantic."""
-        from pydantic import create_model
-
         sig = inspect.signature(self.func)
 
         # Build fields dict for create_model, excluding context parameter for auth tools
@@ -64,9 +63,6 @@ class Tool:
 
             if return_annotation == inspect.Signature.empty:
                 return {"type": "string"}
-
-            # Create a simple Pydantic model with the return type
-            from pydantic import create_model
 
             OutputModel = create_model("Output", result=(return_annotation, ...))
             return OutputModel.model_json_schema()["properties"]["result"]

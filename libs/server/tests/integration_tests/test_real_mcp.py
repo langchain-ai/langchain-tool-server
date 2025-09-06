@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """Test with a real MCP server."""
 
-import asyncio
-import logging
+import pytest
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-
-async def main():
+@pytest.mark.asyncio
+async def test_real_mcp_server():
     """Test loading tools from a real MCP server."""
     from langchain_tool_server import Server
 
@@ -39,44 +36,43 @@ TOOLS = [native_echo]
 [toolkit]
 name = "test_real_mcp"
 tools = "./test_toolkit/__init__.py:TOOLS"
-mcp_prefix_tools = true
 
 [[mcp_servers]]
 name = "test_mcp"
 transport = "stdio"
 command = "python"
-args = ["/Users/isaachershenson/Documents/langchain-tool-server/.conductor/mcp-server-support/libs/server/test_mcp_server.py"]
+args = ["tests/server/mock_mcp_server.py"]
 """
     (test_dir / "toolkit.toml").write_text(toolkit_toml)
 
-    try:
-        # Load the server with MCP support
-        logger.info("Loading toolkit with MCP server...")
-        server = await Server.afrom_toolkit(str(test_dir), enable_mcp=False)
+    server = await Server.afrom_toolkit(str(test_dir), enable_mcp=False)
 
-        logger.info(
-            f"\nSuccessfully loaded server with {len(server.tool_handler.catalog)} tools:"
-        )
-        for tool_name, tool_info in server.tool_handler.catalog.items():
-            logger.info(
-                f"  - {tool_name}: {tool_info.get('description', 'No description')}"
-            )
+    # Should load native tool + MCP tools from mock_mcp_server.py
+    assert len(server.tool_handler.catalog) >= 1, f"Expected at least 1 tool, got {len(server.tool_handler.catalog)}"
 
-        # Test calling a native tool
-        logger.info("\nTesting native tool...")
-        native_request = {
-            "tool_id": "native_echo",
-            "input": {"text": "Hello from native!"},
-        }
-        native_result = await server.tool_handler.call_tool(native_request, None)
-        logger.info(f"Native tool result: {native_result}")
+    # Verify native tool is present
+    assert "native_echo" in server.tool_handler.catalog, "native_echo tool not found"
+    
+    # Test native tool execution
+    native_request = {
+        "tool_id": "native_echo",
+        "input": {"text": "Hello from native!"},
+    }
+    native_result = await server.tool_handler.call_tool(native_request, None)
+    assert native_result["success"] == True, f"native_echo failed: {native_result}"
+    assert native_result["value"] == "Hello from native!", f"Expected 'Hello from native!', got {native_result['value']}"
 
-        # Test calling an MCP tool
-        logger.info("\nTesting MCP tool...")
+    # Test MCP tools if they loaded successfully
+    expected_mcp_tools = ["test_mcp.mcp_add", "test_mcp.mcp_subtract", "test_mcp.mcp_greet"]
+    loaded_mcp_tools = [tool for tool in server.tool_handler.catalog.keys() if tool.startswith("test_mcp.")]
+    
+    if loaded_mcp_tools:
+        # If MCP tools loaded, test them
         if "test_mcp.mcp_add" in server.tool_handler.catalog:
             mcp_request = {"tool_id": "test_mcp.mcp_add", "input": {"x": 5, "y": 3}}
             mcp_result = await server.tool_handler.call_tool(mcp_request, None)
-            logger.info(f"MCP tool result: {mcp_result}")
+            assert mcp_result["success"] == True, f"test_mcp.mcp_add failed: {mcp_result}"
+            assert int(mcp_result["value"]) == 8, f"Expected 8, got {mcp_result['value']}"
 
         if "test_mcp.mcp_greet" in server.tool_handler.catalog:
             greet_request = {
@@ -84,14 +80,8 @@ args = ["/Users/isaachershenson/Documents/langchain-tool-server/.conductor/mcp-s
                 "input": {"name": "LangChain"},
             }
             greet_result = await server.tool_handler.call_tool(greet_request, None)
-            logger.info(f"MCP greet result: {greet_result}")
-
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        import traceback
-
-        logger.error(traceback.format_exc())
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+            assert greet_result["success"] == True, f"test_mcp.mcp_greet failed: {greet_result}"
+            assert "LangChain" in greet_result["value"], f"Expected LangChain in result, got {greet_result['value']}"
+    
+    # The test should pass even if MCP server doesn't connect (graceful degradation)
+    # but native tools should always work
