@@ -56,3 +56,13 @@ jobs:
       python-version: ${{ matrix.python-version }}
     secrets: inherit
 
+  # Summary job that depends on all other jobs
+  # This provides a single check that branch protection can depend on
+  ci-success:
+    name: "CI Success"
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Mark CI as successful
+        run: echo "All CI checks passed!"
+
