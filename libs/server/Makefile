@@ -8,10 +8,13 @@ all: help
 ######################
 
 # Define a variable for the test file path.
-TEST_FILE ?= tests/unit_tests
+TEST ?= tests/unit_tests
 
 test:
-	uv run pytest --disable-socket --allow-unix-socket $(TEST_FILE)
+	uv run pytest --disable-socket --allow-unix-socket $(TEST)
+
+unit-tests:
+	uv run pytest --disable-socket --allow-unix-socket tests/unit_tests
 
 test_watch:
 	uv run ptw . -- $(TEST_FILE)
@@ -19,21 +22,19 @@ test_watch:
 .PHONY: test_integration
 
 test_integration:
-	uv run uvicorn tests.integration.mcp_server:app --host localhost --port 8133 --reload & \
+	uv run python tests/server/mock_mcp_server.py & \
 	pid=$$!; \
 	trap "kill -9 $$pid" EXIT; \
-	while [ "$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8133/health)" != "200" ]; do \
-	  sleep 0.2; \
-	done; \
-	MCP_SSE_URL="http://localhost:8133/mcp/sse" uv run pytest tests/integration
+	sleep 2; \
+	uv run pytest -s tests/integration_tests
 
 start_mcp:
-	# start mcp server for integration tsets
-	uv run uvicorn tests.integration.mcp_server:app --host localhost --port 8133 --reload
+	# start mock mcp server for integration tests
+	uv run python tests/server/mock_mcp_server.py
 
 
 run_integration_test:
-	uv run pytest tests/integration
+	uv run pytest tests/integration_tests
 
 
 ######################

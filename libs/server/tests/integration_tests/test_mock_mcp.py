@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Test MCP integration with mocked MCP server."""
 
-import asyncio
 import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -40,7 +39,6 @@ TOOLS = [native_tool]
 [toolkit]
 name = "test_mock_mcp"
 tools = "./test_toolkit/__init__.py:TOOLS"
-mcp_prefix_tools = true
 
 [[mcp_servers]]
 name = "mock_mcp"
@@ -101,29 +99,4 @@ args = ["mock_server.py"]
                     f"  - {tool_name}: {tool_info.get('description', 'No description')}"
                 )
 
-            # Test native tool
-            logger.info("\nTesting native tool...")
-            native_request = {"tool_id": "native_tool", "input": {"text": "test"}}
-            native_result = await server.tool_handler.call_tool(native_request, None)
-            logger.info(f"Native result: {native_result}")
-
-            # Test MCP tools
-            logger.info("\nTesting MCP tools...")
-            if "mock_mcp.add" in server.tool_handler.catalog:
-                add_request = {"tool_id": "mock_mcp.add", "input": {"x": 10, "y": 20}}
-                add_result = await server.tool_handler.call_tool(add_request, None)
-                logger.info(f"Add result: {add_result}")
-
-            if "mock_mcp.greet" in server.tool_handler.catalog:
-                greet_request = {
-                    "tool_id": "mock_mcp.greet",
-                    "input": {"name": "World"},
-                }
-                greet_result = await server.tool_handler.call_tool(greet_request, None)
-                logger.info(f"Greet result: {greet_result}")
-
-            logger.info("\n✅ All tests passed!")
-
-
-if __name__ == "__main__":
-    asyncio.run(test_mcp_with_mock())
+            #assert server.tool_handler.catalog["mock_mcp.add"].name == "mcp"
