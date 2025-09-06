@@ -32,7 +32,7 @@ def _load_auth_instance(path: str, package_dir) -> Auth:
     """Load an Auth instance from a path string.
 
     Args:
-        path: Path in format './path/to/file.py:auth_instance_name'
+        path: Path in the format './path/to/file.py:auth_instance_name'
         package_dir: Base directory for resolving relative paths
 
     Returns:
