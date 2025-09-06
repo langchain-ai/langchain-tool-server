@@ -232,7 +232,7 @@ headers = { "Authorization" = "Bearer token" }
 
 #### Usage
 
-Install the `langchain-cli-v2` python package and run:
+Install the `langchain-cli-v2` python package by running `pip install langchain-cli-v2` and run:
 
 ```shell
 langchain tools serve
