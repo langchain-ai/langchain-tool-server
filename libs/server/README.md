@@ -232,21 +232,7 @@ headers = { "Authorization" = "Bearer token" }
 
 #### Usage
 
-Use async initialization to load MCP tools:
-
-```python
-import asyncio
-from langchain_tool_server import Server
-
-async def main():
-    # Load server with MCP tools
-    server = await Server.afrom_toolkit(mcp=True)
-    # Server now has both native and MCP tools
-    
-asyncio.run(main())
-```
-
-Alternatively, if you have `langchain-cli-v2` package installed, you can just run:
+Install the `langchain-cli-v2` python package by running `pip install langchain-cli-v2` and run:
 
 ```shell
 langchain tools serve
