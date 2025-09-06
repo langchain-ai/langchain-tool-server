@@ -8,7 +8,7 @@ mcp = FastMCP("Test MCP Server")
 
 
 @mcp.tool()
-def mcp_add(x: int, y) -> int:
+def mcp_add(x: int, y: int) -> int:
     """Add two numbers via MCP."""
     return x + y
 
