@@ -18,6 +18,7 @@ from langchain_tool_server.auth.middleware import (
     on_auth_error,
 )
 from langchain_tool_server.context import Context
+from langchain_tool_server.mcp_loader import load_mcp_servers_tools
 from langchain_tool_server.splash import SPLASH
 from langchain_tool_server.tool import tool
 from langchain_tool_server.tools import (
@@ -310,18 +311,23 @@ class Server:
         )
 
     @classmethod
-    def from_toolkit(cls, toolkit_dir: str = ".", **kwargs) -> "Server":
-        """Create server from toolkit directory.
+    def _load_toolkit_base(
+        cls, toolkit_dir: str = ".", **kwargs
+    ) -> tuple["Server", dict]:
+        """Load toolkit base configuration and create server with tools and auth.
+
+        This is a shared helper method for both from_toolkit and afrom_toolkit
+        that handles all the common toolkit loading logic.
 
         Args:
             toolkit_dir: Path to toolkit directory (default: current directory)
             **kwargs: Additional arguments passed to Server constructor
 
         Returns:
-            Server instance with toolkit tools registered
+            Tuple of (server_instance, toolkit_config)
 
         Raises:
-            ValueError: If no toolkit package found or TOOLS registry missing
+            ValueError: If no toolkit package found or configuration is invalid
         """
         from pathlib import Path
 
@@ -386,19 +392,38 @@ class Server:
 
             logger.info(f"Successfully registered {len(tools)} tools from {tools_path}")
 
-            # Check if MCP servers are configured
-            mcp_servers = toolkit_config.get("mcp_servers", [])
-            if mcp_servers:
-                logger.warning(
-                    f"Found {len(mcp_servers)} MCP server configuration(s) in toolkit.toml. "
-                    "MCP servers require async initialization. Please use Server.afrom_toolkit() "
-                    "instead of Server.from_toolkit() to load MCP server tools."
-                )
-
-            return server
+            return server, toolkit_config
 
         except (ImportError, ModuleNotFoundError) as e:
             raise ValueError(f"Error importing toolkit: {e}") from e
+
+    @classmethod
+    def from_toolkit(cls, toolkit_dir: str = ".", **kwargs) -> "Server":
+        """Create server from toolkit directory.
+
+        Args:
+            toolkit_dir: Path to toolkit directory (default: current directory)
+            **kwargs: Additional arguments passed to Server constructor
+
+        Returns:
+            Server instance with toolkit tools registered
+
+        Raises:
+            ValueError: If no toolkit package found or TOOLS registry missing
+        """
+        # Load toolkit base configuration and create server
+        server, toolkit_config = cls._load_toolkit_base(toolkit_dir, **kwargs)
+
+        # Check if MCP servers are configured
+        mcp_servers = toolkit_config.get("mcp_servers", [])
+        if mcp_servers:
+            logger.warning(
+                f"Found {len(mcp_servers)} MCP server configuration(s) in toolkit.toml. "
+                "MCP servers require async initialization. Please use Server.afrom_toolkit() "
+                "instead of Server.from_toolkit() to load MCP server tools."
+            )
+
+        return server
 
     @classmethod
     async def afrom_toolkit(cls, toolkit_dir: str = ".", **kwargs) -> "Server":
@@ -417,101 +442,36 @@ class Server:
         Raises:
             ValueError: If no toolkit package found or configuration is invalid
         """
-        from pathlib import Path
+        # Load toolkit base configuration and create server
+        server, toolkit_config = cls._load_toolkit_base(toolkit_dir, **kwargs)
 
-        toolkit_path = Path(toolkit_dir).resolve()
-
-        # Find package directory (has __init__.py and is not hidden/cache)
-        package_dirs = [
-            d
-            for d in toolkit_path.iterdir()
-            if d.is_dir()
-            and (d / "__init__.py").exists()
-            and not d.name.startswith(".")
-            and d.name
-            not in {"__pycache__", "node_modules", ".git", ".venv", "venv", "env"}
-        ]
-
-        if not package_dirs:
-            raise ValueError(f"No toolkit package found in {toolkit_path}")
-
-        package_dir = package_dirs[0]
-        package_name = package_dir.name
-
-        logger.info(f"Loading toolkit: {package_name}")
-
-        try:
-            with open(toolkit_path / "toolkit.toml", "rb") as f:
-                toolkit_config = tomllib.load(f)
-
-            tools_path = toolkit_config.get("toolkit", {}).get("tools")
-            if not tools_path:
-                raise ValueError(
-                    "No tools path specified in toolkit.toml. "
-                    "Please add: tools = './path/to/file.py:TOOLS'"
+        # Load MCP server tools if configured
+        mcp_servers = toolkit_config.get("mcp_servers", [])
+        if mcp_servers:
+            logger.info(f"Found {len(mcp_servers)} MCP server configurations")
+            try:
+                # Load tools from MCP servers
+                mcp_tools = await load_mcp_servers_tools(
+                    mcp_servers,
+                    prefix_tools=toolkit_config.get("mcp_prefix_tools", True),
                 )
 
-            tools = _load_tools_object(tools_path, toolkit_path)
+                # Register MCP tools
+                for tool in mcp_tools:
+                    server._add_tool(tool)
 
-            auth_instance = None
-            auth_path = toolkit_config.get("toolkit", {}).get("auth")
+                logger.info(f"Successfully registered {len(mcp_tools)} MCP tools")
 
-            if auth_path:
-                logger.info(f"Loading auth from path: {auth_path}")
-                try:
-                    auth_instance = _load_auth_instance(auth_path, toolkit_path)
-                    logger.info(f"Successfully loaded auth handler from {auth_path}")
-                except Exception as e:
-                    logger.error(f"Failed to load auth from {auth_path}: {e}")
-                    import traceback
+            except ImportError as e:
+                logger.warning(
+                    f"langchain-mcp-adapters not installed, skipping MCP servers: {e}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to load MCP server tools: {e}")
+                # Don't fail the entire server if MCP loading fails
+                # This allows graceful degradation
 
-                    logger.error(f"Auth loading traceback:\n{traceback.format_exc()}")
-                    raise e
-
-            # Create server and register native tools
-            server = cls(**kwargs)
-
-            # Add auth if found
-            if auth_instance:
-                server._add_auth(auth_instance)
-
-            for tool_item in tools:
-                server._add_tool(tool_item)
-
-            logger.info(f"Successfully registered {len(tools)} tools from {tools_path}")
-
-            # Load MCP server tools if configured
-            mcp_servers = toolkit_config.get("mcp_servers", [])
-            if mcp_servers:
-                logger.info(f"Found {len(mcp_servers)} MCP server configurations")
-                try:
-                    from langchain_tool_server.mcp_loader import load_mcp_servers_tools
-
-                    # Load tools from MCP servers
-                    mcp_tools = await load_mcp_servers_tools(
-                        mcp_servers,
-                        prefix_tools=toolkit_config.get("mcp_prefix_tools", True),
-                    )
-
-                    # Register MCP tools
-                    for tool in mcp_tools:
-                        server._add_tool(tool)
-
-                    logger.info(f"Successfully registered {len(mcp_tools)} MCP tools")
-
-                except ImportError as e:
-                    logger.warning(
-                        f"langchain-mcp-adapters not installed, skipping MCP servers: {e}"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to load MCP server tools: {e}")
-                    # Don't fail the entire server if MCP loading fails
-                    # This allows graceful degradation
-
-            return server
-
-        except (ImportError, ModuleNotFoundError) as e:
-            raise ValueError(f"Error importing toolkit: {e}") from e
+        return server
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI Application"""
